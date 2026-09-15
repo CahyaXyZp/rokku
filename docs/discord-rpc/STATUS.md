@@ -9,11 +9,9 @@ Core RPC engine (Agent 1) and settings scaffold (Agent 3) both have a first pass
 ## Scope decided so far
 - Presence shows only while actively reading a chapter (not app-wide).
 - Incognito: reuse Rokku's existing global + per-extension incognito, not a separate per-category system.
-- 18+ toggle: suppresses RPC when reading 18+ content. Flag source: **from the extension** (extension-provided genre/tag on the manga), not a manually assigned category, and **not** a whole-source flag — see ⚠️ below.
+- 18+ toggle: suppresses RPC when reading from a **source flagged as 18+/NSFW** (source-level, extension-provided), not a manually assigned category. Agent 3's original `discord_rpc_suppress_18plus_summary` string was correct as written — a prior status note here calling it "drift" was a misread and has been removed.
 - Multi-account, fully custom activity text, and RPC cover art are all in scope (see AGENTS.md).
 - Avoid the third-party image proxy the reference implementation depends on.
-
-⚠️ **Known drift to fix**: `discord_rpc_suppress_18plus_summary` (Agent 3's strings commit) currently reads "reading a series from a source flagged as 18+" — that's source-level, but the decision is per-manga (extension-provided genre/tag), since many sources mix 18+ and non-18+ titles. Needs a string + suppression-check fix in Agent 3's integration work.
 
 ## Reference material
 - [Hiirbaf/yokai@ad11af2](https://github.com/Hiirbaf/yokai/commit/ad11af21ac50d02db24a93c72db92245ae67e745) — Kizzy-style base (WebSocket gateway, multi-account, per-category incognito, proxy-based cover art). Already covers multi-account and incognito-style suppression, but not per-extension incognito, free-text activity, or the 18+ toggle.
@@ -32,4 +30,4 @@ Core RPC engine (Agent 1) and settings scaffold (Agent 3) both have a first pass
 - Added `SettingsConnectionsController` — new top-level "Connections" entry in Settings (`SettingsMainController`), flat, not nested under an existing screen.
 - Added `DiscordRpcPreferences` (`data/connections/discord/`) backing the screen: enable toggle, custom activity text, suppress-in-incognito, suppress-for-18+, show-cover-art. Registered in `PreferenceModule`.
 - "Accounts" row is a placeholder (toast) pending Agent 2's account management screen — replace the `onClick` in `SettingsConnectionsController` once that screen exists.
-- Still blocked on: real RPC engine to read `enabled()` from (now exists, needs wiring), reader lifecycle hook, actual suppression logic, and the 18+ scope fix noted above.
+- Still blocked on: real RPC engine to read `enabled()` from (now exists, needs wiring), reader lifecycle hook, and actual suppression logic (global/per-extension incognito + source-level 18+ flag).

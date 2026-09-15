@@ -4,7 +4,7 @@ Three agents work on this branch (`feature/discord-rpc-kizzy`). Before starting 
 
 Reference implementation: [Hiirbaf/yokai@ad11af2](https://github.com/Hiirbaf/yokai/commit/ad11af21ac50d02db24a93c72db92245ae67e745) (Kizzy-style, token + WebSocket gateway). Use as a base, not a copy — see gaps in STATUS.md.
 
-Code style: comments allowed, but concise — no filler. Commit messages: short prefixed title (`feat:`, `fix:`, `chore:`), details in the commit body.
+Code style: comments allowed, but concise — no filler. Commit messages: Conventional Commits format `type(scope): description` (e.g. `feat(rpc): add websocket client`).
 
 ---
 
@@ -26,6 +26,6 @@ Code style: comments allowed, but concise — no filler. Commit messages: short 
 
 - Wire RPC into `ReaderActivity` (start/update/stop, chapter change updates).
 - Suppression logic: Rokku's existing **global incognito** AND **per-extension incognito** (`isIncognitoModeForSource()`) — not per-category like the yokai reference.
-- **18+ toggle**: suppress RPC when reading content the extension flags as 18+ (extension-provided genre/tag — not a manual user category). Needs a helper to read that flag from the manga/source's extension metadata.
+- **18+ toggle**: suppress RPC when reading from a **source flagged as 18+/NSFW** (source-level, extension-provided — e.g. an existing `isNsfw`-style source flag), not a manual category.
 - Cover art for RPC assets — avoid the third-party proxy dependency (`kizzy-api.cjjdxhdjd.workers.dev`) used in the reference; find a self-contained approach.
 - Settings UI: Connections screen (enable, status, custom activity text, incognito toggles, 18+ toggle, accounts entry point).
