@@ -6,12 +6,10 @@ Direction: token-based (Kizzy-style), not the official Discord SDK — pivoted b
 ## Current phase
 Planning / scope defined. No implementation pushed yet.
 
-## Open questions
-- **18+ flag source**: not yet decided where the "is this manga 18+" signal comes from — extension-provided genre/tag, a manual user-assigned category, or something else. Blocks Agent 3's suppression logic until resolved.
-
 ## Scope decided so far
 - Presence shows only while actively reading a chapter (not app-wide).
 - Incognito: reuse Rokku's existing global + per-extension incognito, not a separate per-category system.
+- 18+ toggle: suppresses RPC when reading 18+ content. Flag source: **from the extension** (extension-provided genre/tag), not a manually assigned category.
 - Multi-account, fully custom activity text, and RPC cover art are all in scope (see AGENTS.md).
 - Avoid the third-party image proxy the reference implementation depends on.
 

@@ -26,6 +26,6 @@ Code style: comments allowed, but concise — no filler. Commit messages: short 
 
 - Wire RPC into `ReaderActivity` (start/update/stop, chapter change updates).
 - Suppression logic: Rokku's existing **global incognito** AND **per-extension incognito** (`isIncognitoModeForSource()`) — not per-category like the yokai reference.
-- New **18+ toggle**: suppress RPC when reading content flagged 18+. Source of the flag is still open — see STATUS.md.
+- **18+ toggle**: suppress RPC when reading content the extension flags as 18+ (extension-provided genre/tag — not a manual user category). Needs a helper to read that flag from the manga/source's extension metadata.
 - Cover art for RPC assets — avoid the third-party proxy dependency (`kizzy-api.cjjdxhdjd.workers.dev`) used in the reference; find a self-contained approach.
 - Settings UI: Connections screen (enable, status, custom activity text, incognito toggles, 18+ toggle, accounts entry point).
