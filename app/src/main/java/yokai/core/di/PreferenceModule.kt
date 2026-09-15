@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.core.preference.AndroidPreferenceStore
 import eu.kanade.tachiyomi.core.preference.PreferenceStore
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.core.storage.AndroidStorageFolderProvider
+import eu.kanade.tachiyomi.data.connections.discord.DiscordRpcPreferences
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.data.track.TrackPreferences
 import eu.kanade.tachiyomi.network.NetworkPreferences
@@ -45,6 +46,8 @@ fun preferenceModule(application: Application) = module {
     }
 
     single { SecurityPreferences(get()) }
+
+    single { DiscordRpcPreferences(get()) }
 
     single { BackupPreferences(get()) }
 
