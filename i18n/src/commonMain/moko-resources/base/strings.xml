@@ -669,6 +669,25 @@
     <string name="use_suggested_date">Use suggested date</string>
     <string name="failed_to_update_">Failed to update %1$s</string>
 
+    <!-- Connections -->
+    <string name="connections">Connections</string>
+    <string name="discord_rich_presence">Discord Rich Presence</string>
+    <string name="discord_rpc_enable">Enable Discord Rich Presence</string>
+    <string name="discord_rpc_enable_summary">Show what you\'re reading as your Discord status while in the reader</string>
+    <string name="discord_rpc_accounts">Accounts</string>
+    <string name="discord_rpc_accounts_summary">Manage the Discord accounts used for Rich Presence</string>
+    <string name="discord_rpc_accounts_coming_soon">Account management is still being built</string>
+    <string name="discord_rpc_custom_text">Custom status text</string>
+    <string name="discord_rpc_custom_text_summary">Shown alongside the series and chapter you\'re reading</string>
+    <string name="privacy">Privacy</string>
+    <string name="discord_rpc_suppress_incognito">Suppress in Incognito mode</string>
+    <string name="discord_rpc_suppress_incognito_summary">Don\'t update Discord status while Incognito mode is on, globally or for the current source</string>
+    <string name="discord_rpc_suppress_18plus">Suppress for 18+ content</string>
+    <string name="discord_rpc_suppress_18plus_summary">Don\'t update Discord status while reading a series from a source flagged as 18+</string>
+    <string name="discord_rpc_show_cover_art">Show cover art</string>
+    <string name="discord_rpc_show_cover_art_summary">Display the series cover as the status image</string>
+    <string name="discord_rpc_info">Rich Presence lets your Discord friends see what you\'re reading. It only updates while you\'re actively in the reader</string>
+
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
     <string name="source_migration">Source migration</string>
