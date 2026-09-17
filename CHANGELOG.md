@@ -30,6 +30,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed a rare non-fatal error when cancelling an extension download after the app's process had been recreated
 
 ### Other
+- Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
 - Reduced Crashlytics noise by no longer reporting a dead or misconfigured extension repo (HTTP 404 on its `repo.json` or index) as a non-fatal error
 - Reduced Crashlytics noise by no longer reporting cover-loading, reader, browse, and backup failures that only reflect a source, the network, or the device misbehaving rather than a Rokku bug
 - Reduced Crashlytics noise further: handled extension-repo fetch failures, call timeouts/cancellations, dropped connections, unresolved WebView challenges, and broken local-library folders are no longer reported
