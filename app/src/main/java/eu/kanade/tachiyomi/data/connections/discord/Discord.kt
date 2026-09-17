@@ -86,7 +86,7 @@ class Discord(id: Long) : ConnectionsService(id) {
             val accountsJson = json.encodeToString(accounts)
             connectionsPreferences.discordAccounts().set(accountsJson)
         } catch (e: Exception) {
-            Logger.e("Discord") { "Failed to save Discord accounts: ${e.message}" }
+            Logger.e(throwable = e, tag = RICH_PRESENCE_TAG) { "Failed to save Discord accounts" }
         }
     }
 }
