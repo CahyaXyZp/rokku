@@ -86,7 +86,7 @@ open class DiscordWebSocketImpl(
     }
 
     override fun close() {
-        Logger.i(tag = RICH_PRESENCE_TAG) { "Closing Discord WebSocket, sending offline status" }
+        Logger.i { "Closing Discord WebSocket, sending offline status" }
         webSocket?.send(
             json.encodeToString(
                 Presence.Response(
@@ -112,11 +112,11 @@ open class DiscordWebSocketImpl(
                 d = presence,
             )
             val sent = webSocket?.send(json.encodeToString(response))
-            if (sent != true) Logger.e(tag = RICH_PRESENCE_TAG) { "Failed to send ${OpCode.PRESENCE_UPDATE}" }
+            if (sent != true) Logger.e { "Failed to send ${OpCode.PRESENCE_UPDATE}" }
         } catch (e: TimeoutCancellationException) {
-            Logger.e(throwable = e, tag = RICH_PRESENCE_TAG) { "Timeout waiting for Discord connection, skipping activity update" }
+            Logger.e(e) { "Timeout waiting for Discord connection, skipping activity update" }
         } catch (e: Exception) {
-            Logger.e(throwable = e, tag = RICH_PRESENCE_TAG) { "Error sending Discord activity" }
+            Logger.e(e) { "Error sending Discord activity" }
         }
     }
 
@@ -160,14 +160,14 @@ open class DiscordWebSocketImpl(
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Logger.i(tag = RICH_PRESENCE_TAG) { "Discord gateway closed: $code $reason" }
+            Logger.i { "Discord gateway closed: $code $reason" }
             if (code == NORMAL_CLOSURE_CODE) {
                 scope.cancel()
             }
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            Logger.e(throwable = t, tag = RICH_PRESENCE_TAG) { "Discord WebSocket failure" }
+            Logger.e(t) { "Discord WebSocket failure" }
             if (t.message != CLOSE_REASON_INTERRUPT) {
                 this@DiscordWebSocketImpl.webSocket = client.newWebSocket(request, Listener())
             }

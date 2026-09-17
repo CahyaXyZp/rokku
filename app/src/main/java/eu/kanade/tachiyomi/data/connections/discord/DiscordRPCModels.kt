@@ -5,9 +5,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-// Constant for logging tag
-const val RICH_PRESENCE_TAG = "discord_rpc"
-
 // Constant for application id, internal only - not user configurable
 internal const val RICH_PRESENCE_APPLICATION_ID = "1547043658719698984"
 
