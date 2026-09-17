@@ -672,6 +672,7 @@
 
     <!-- Connections -->
     <string name="connections_discord" translatable="false">Discord</string>
+    <string name="discord_rpc_notification_content">Rich Presence is running</string>
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
