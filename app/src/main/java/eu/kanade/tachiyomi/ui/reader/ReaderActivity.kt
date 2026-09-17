@@ -84,6 +84,7 @@ import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.preference.toggle
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
+import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.database.models.Chapter
 import eu.kanade.tachiyomi.data.database.models.orientationType
 import eu.kanade.tachiyomi.data.database.models.readingModeType
@@ -1512,12 +1513,34 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
 
     override fun onPause() {
         viewModel.flushReadTimer()
+        DiscordRPCService.stop(this)
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
+        DiscordRPCService.start(this)
+        updateDiscordActivity()
+    }
+
+    /**
+     * Pushes the manga/chapter currently being read to Discord Rich Presence, if the feature is
+     * enabled and an account is configured. No-ops entirely otherwise (handled inside
+     * [DiscordRPCService]) so this stays a no-op when the feature is off.
+     */
+    private fun updateDiscordActivity() {
+        val manga = viewModel.manga ?: return
+        val chapter = viewModel.getCurrentChapter()?.chapter ?: return
+        lifecycleScope.launch {
+            val totalChapters = viewModel.getChapters().size
+            DiscordRPCService.setReadingActivity(
+                this@ReaderActivity,
+                manga.title,
+                chapter.chapter_number.roundToInt().coerceAtLeast(1),
+                totalChapters,
+            )
+        }
     }
 
     override fun onMultiWindowModeChanged(
@@ -1625,6 +1648,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         if (didTransitionFromChapter) {
             MainActivity.chapterIdToExitTo = viewerChapters.currChapter.chapter.id ?: 0L
         }
+        updateDiscordActivity()
     }
 
     private fun getTitleTextView(): TextView? = getTextViewsWithText(binding.toolbar.title)
