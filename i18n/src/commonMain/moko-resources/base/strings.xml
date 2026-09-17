@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Rokku</string>
@@ -375,7 +376,7 @@
     <string name="_must_be_enabled_first">%1$s must be enabled first</string>
     <string name="could_not_install_extension">Could not install extension</string>
     <string name="update_all">Update all</string>
-    <string name="some_extensions_may_prompt">Some extensions may still prompt to be installed first.</string>
+    <string name="some_extensions_may_still_prompt">Some extensions may still prompt to be installed first.</string>
     <string name="updating_extensions">Updating extensions</string>
     <string name="extensions_updated">Extensions updated</string>
     <string name="action_revoke_all_extensions">Revoke all trusted extensions</string>
@@ -668,6 +669,9 @@
     <string name="myanimelist_relogin">Please log in to MAL again</string>
     <string name="use_suggested_date">Use suggested date</string>
     <string name="failed_to_update_">Failed to update %1$s</string>
+
+    <!-- Connections -->
+    <string name="connections_discord" translatable="false">Discord</string>
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
