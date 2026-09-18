@@ -28,6 +28,10 @@ class ConnectionsPreferences(
 
     fun discordAccounts() = preferenceStore.getString(Preference.privateKey("discord_accounts"), "")
 
+    fun discordCustomActivityName() = preferenceStore.getString("pref_discord_custom_activity_name", "")
+
+    fun discordShowAppIcon() = preferenceStore.getBoolean("pref_discord_show_app_icon", true)
+
     companion object {
         fun connectionsUsername(syncId: Long) = Preference.privateKey("pref_connections_username_$syncId")
 
