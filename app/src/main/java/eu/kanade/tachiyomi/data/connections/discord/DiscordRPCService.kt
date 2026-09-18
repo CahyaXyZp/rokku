@@ -166,6 +166,7 @@ class DiscordRPCService : Service() {
                 val appName = context.getString(MR.strings.app_name)
                 val customName = connectionsPreferences.discordCustomActivityName().get()
                 val showAppIcon = connectionsPreferences.discordShowAppIcon().get()
+                val largeImage = if (showAppIcon) activeRpc.resolveAppIcon() else null
                 activeRpc.updateRPC(
                     activity = Activity(
                         name = customName.ifBlank { appName },
@@ -173,11 +174,7 @@ class DiscordRPCService : Service() {
                         state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters),
                         type = ActivityType.WATCHING.value,
                         timestamps = Activity.Timestamps(start = since),
-                        assets = if (showAppIcon) {
-                            Activity.Assets(largeImage = RICH_PRESENCE_APP_ICON_ASSET_KEY, largeText = appName)
-                        } else {
-                            null
-                        },
+                        assets = largeImage?.let { Activity.Assets(largeImage = it, largeText = appName) },
                     ),
                     since = since,
                 )
