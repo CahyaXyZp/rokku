@@ -14,6 +14,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - An automatic backup that fails because its saved location is no longer accessible (folder deleted, permission revoked, storage removed) now shows a notification telling you to pick a new one, instead of failing silently
 
 ### Fixes
+- Fixed extension loading failing when a repository published its lib version or content warning metadata as a numeric type instead of a string ([@pacoa-kdbg](https://github.com/pacoa-kdbg))
 - Fixed "Show content in cutout area" doing nothing on Android 15+ (content still drew into the camera cutout/notch when the option was turned off)
 - Fixed a crash when updating all extensions with many updates pending (the work request's input data exceeded its size limit)
 - Fixed a rare crash in Recents ("Two different ViewHolders have the same stable ID") caused by a section header's id colliding with a chapter row's
@@ -29,6 +30,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed a rare non-fatal error when cancelling an extension download after the app's process had been recreated
 
 ### Other
+- Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
 - Reduced Crashlytics noise by no longer reporting a dead or misconfigured extension repo (HTTP 404 on its `repo.json` or index) as a non-fatal error
 - Reduced Crashlytics noise by no longer reporting cover-loading, reader, browse, and backup failures that only reflect a source, the network, or the device misbehaving rather than a Rokku bug
 - Reduced Crashlytics noise further: handled extension-repo fetch failures, call timeouts/cancellations, dropped connections, unresolved WebView challenges, and broken local-library folders are no longer reported
