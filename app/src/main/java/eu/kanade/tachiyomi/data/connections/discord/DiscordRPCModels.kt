@@ -8,6 +8,11 @@ import kotlinx.serialization.json.JsonElement
 // Constant for application id, internal only - not user configurable
 internal const val RICH_PRESENCE_APPLICATION_ID = "1547043658719698984"
 
+// Key of the Rich Presence asset used for the "show app icon" large image. Rich Presence assets
+// are uploaded separately in the Discord Developer Portal for this application id - this key
+// only has an effect once an asset with this exact name exists there.
+internal const val RICH_PRESENCE_APP_ICON_ASSET_KEY = "app_icon"
+
 @Serializable
 data class Activity(
     @SerialName("application_id")
