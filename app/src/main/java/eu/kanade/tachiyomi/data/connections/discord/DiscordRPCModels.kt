@@ -8,10 +8,12 @@ import kotlinx.serialization.json.JsonElement
 // Constant for application id, internal only - not user configurable
 internal const val RICH_PRESENCE_APPLICATION_ID = "1547043658719698984"
 
-// Key of the Rich Presence asset used for the "show app icon" large image. Rich Presence assets
-// are uploaded separately in the Discord Developer Portal for this application id - this key
-// only has an effect once an asset with this exact name exists there.
-internal const val RICH_PRESENCE_APP_ICON_ASSET_KEY = "app_icon"
+// URL of the app icon shown as the large image on the Rich Presence status when "Show app icon"
+// is enabled. Discord doesn't accept raw image URLs in Activity.assets - it has to be exchanged
+// for a "mp:" asset path first via RPCExternalAsset, which is what DiscordRPC.resolveAppIcon()
+// does.
+internal const val RICH_PRESENCE_APP_ICON_URL =
+    "https://raw.githubusercontent.com/CahyaXyZp/rokku/master/.github/readme-images/app-icon.webp"
 
 @Serializable
 data class Activity(
