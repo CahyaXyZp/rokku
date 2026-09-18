@@ -151,18 +151,33 @@ class DiscordRPCService : Service() {
         /**
          * Updates the Rich Presence: Activity "Watching", Details [title],
          * State "Chapter [currentChapter] of [totalChapters]", Timestamp elapsed since the
-         * service started.
+         * service started. The activity's name (shown right after "Watching") and whether the
+         * app icon is attached as the large image both follow user preferences.
          */
-        fun setReadingActivity(context: Context, title: String, currentChapter: Int, totalChapters: Int) {
+        fun setReadingActivity(
+            context: Context,
+            title: String,
+            currentChapter: Int,
+            totalChapters: Int,
+            connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+        ) {
             val activeRpc = rpc ?: return
             launchIO {
+                val appName = context.getString(MR.strings.app_name)
+                val customName = connectionsPreferences.discordCustomActivityName().get()
+                val showAppIcon = connectionsPreferences.discordShowAppIcon().get()
                 activeRpc.updateRPC(
                     activity = Activity(
-                        name = title,
+                        name = customName.ifBlank { appName },
                         details = title,
                         state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters),
                         type = ActivityType.WATCHING.value,
                         timestamps = Activity.Timestamps(start = since),
+                        assets = if (showAppIcon) {
+                            Activity.Assets(largeImage = RICH_PRESENCE_APP_ICON_ASSET_KEY, largeText = appName)
+                        } else {
+                            null
+                        },
                     ),
                     since = since,
                 )
