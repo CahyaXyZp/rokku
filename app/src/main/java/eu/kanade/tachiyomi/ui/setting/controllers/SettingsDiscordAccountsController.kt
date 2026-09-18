@@ -56,7 +56,7 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
                         }
                         onLongClick {
                             activity?.let { act ->
-                                materialAlertDialog(act)
+                                act.materialAlertDialog()
                                     .setMessage(MR.strings.discord_rpc_remove_account_confirm)
                                     .setPositiveButton(AR.string.ok) { _, _ ->
                                         connectionsManager.discord.removeAccount(account.id)
@@ -83,7 +83,7 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
     private fun showAddAccountDialog(screen: PreferenceScreen) {
         val act = activity ?: return
         val editText = EditText(act)
-        materialAlertDialog(act)
+        act.materialAlertDialog()
             .setTitle(MR.strings.discord_rpc_add_account)
             .setMessage(MR.strings.discord_rpc_add_account_dialog_message)
             .setView(editText)
