@@ -1,11 +1,18 @@
 package eu.kanade.tachiyomi.data.connections.discord
 
+import android.app.Application
 import android.graphics.Color
 import co.touchlab.kermit.Logger
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.Request
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import yokai.i18n.MR
@@ -27,6 +34,38 @@ class Discord(id: Long) : ConnectionsService(id) {
 
     override suspend fun login(username: String, password: String) {
         // Not needed, Discord RPC authenticates via an account token instead
+    }
+
+    /**
+     * Validates [token] against the Discord API and returns the associated account profile, or
+     * null if the token is invalid or the request fails. The first account ever added is marked
+     * active by default.
+     */
+    suspend fun fetchProfile(token: String): DiscordAccount? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("https://discord.com/api/v10/users/@me")
+                .addHeader("Authorization", token)
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                val user = json.parseToJsonElement(body).jsonObject
+                val id = user["id"]?.jsonPrimitive?.contentOrNull ?: return@withContext null
+                val username = user["username"]?.jsonPrimitive?.contentOrNull ?: return@withContext null
+                val avatar = user["avatar"]?.jsonPrimitive?.contentOrNull
+                DiscordAccount(
+                    id = id,
+                    username = username,
+                    avatarUrl = avatar?.let { "https://cdn.discordapp.com/avatars/$id/$it.png" },
+                    token = token,
+                    isActive = getAccounts().isEmpty(),
+                )
+            }
+        } catch (e: Exception) {
+            Logger.e(e) { "Failed to fetch Discord profile" }
+            null
+        }
     }
 
     fun getAccounts(): List<DiscordAccount> {
@@ -76,9 +115,13 @@ class Discord(id: Long) : ConnectionsService(id) {
         }
     }
 
+    /**
+     * Restarts the RPC service so it picks up the newly active account's token. No-ops when
+     * Rich Presence is currently disabled or no token is set - handled inside
+     * [DiscordRPCService.restart] itself.
+     */
     fun restartRichPresence() {
-        connectionsPreferences.enableDiscordRPC().set(false)
-        connectionsPreferences.enableDiscordRPC().set(true)
+        DiscordRPCService.restart(Injekt.get<Application>())
     }
 
     private fun saveAccounts(accounts: List<DiscordAccount>) {
