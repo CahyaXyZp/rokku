@@ -1,8 +1,10 @@
 package eu.kanade.tachiyomi.ui.setting.controllers
 
 import android.app.Activity
+import android.content.Context
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import eu.kanade.tachiyomi.ui.setting.bindTo
@@ -18,7 +20,6 @@ import uy.kohesive.injekt.injectLazy
 import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
 import yokai.util.lang.getString
-import eu.kanade.tachiyomi.R
 
 /**
  * Settings > Connections. Currently only holds Discord Rich Presence, but is named generically
@@ -47,6 +48,7 @@ class SettingsConnectionsController : SettingsLegacyController() {
                 iconRes = R.drawable.ic_discord_24dp
                 titleRes = MR.strings.discord_rpc_connect_account
                 isPersistent = false
+                summary = accountSummary(context)
                 onClick {
                     router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
                 }
@@ -68,15 +70,15 @@ class SettingsConnectionsController : SettingsLegacyController() {
 
     override fun onActivityResumed(activity: Activity) {
         super.onActivityResumed(activity)
-        updateAccountsSummary()
+        accountsPreference?.summary = accountSummary(activity)
     }
 
-    private fun updateAccountsSummary() {
+    private fun accountSummary(context: Context): String {
         val accounts = connectionsManager.discord.getAccounts()
-        accountsPreference?.summary = when {
-            accounts.isEmpty() -> context?.getString(MR.strings.discord_rpc_not_connected)
+        return when {
+            accounts.isEmpty() -> context.getString(MR.strings.discord_rpc_not_connected)
             accounts.size == 1 -> accounts.first().username
-            else -> context?.getString(MR.strings.discord_rpc_accounts_connected, accounts.size)
+            else -> context.getString(MR.strings.discord_rpc_accounts_connected, accounts.size)
         }
     }
 }
