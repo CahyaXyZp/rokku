@@ -28,6 +28,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed a crash when range-selecting chapters to download/read/mark on the manga details screen (the selection could run past the end of the chapter list)
 - Fixed a crash while browsing a source whose filter list threw an error as it loaded in the background
 - Fixed a rare non-fatal error when cancelling an extension download after the app's process had been recreated
+- Fixed extension updates getting stuck showing "Downloading" forever when Android's DownloadManager silently failed a download or stalled without ever reaching a terminal state
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable

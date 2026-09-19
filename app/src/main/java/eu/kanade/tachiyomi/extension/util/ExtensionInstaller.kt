@@ -200,18 +200,42 @@ internal class ExtensionInstaller(private val context: Context) {
      * Returns a flow that polls the given download id for its status every second, as the
      * manager doesn't have any notification system. It'll stop once the download finishes.
      *
+     * DownloadManager itself has no notion of a stalled transfer: if it gets stuck RUNNING or
+     * PENDING at the OS level (no network progress, but not PAUSED either) it'll happily report
+     * that same status forever, so without our own stall check the flow -- and the "Downloading"
+     * UI state -- would just hang indefinitely with no way for the user to retry.
+     *
      * @param id The id of the download to poll.
      */
     @SuppressLint("Range")
     private fun pollStatus(id: Long): Flow<ExtensionIntallInfo> {
         val query = DownloadManager.Query().setFilterById(id)
+        var lastBytesDownloaded = -1L
+        var stalledPolls = 0
 
         return flow {
             while (true) {
                 val newDownloadState = try {
                     downloadManager.query(query)?.use { cursor ->
                         cursor.moveToFirst()
-                        cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+                        val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+                        val bytesDownloaded = cursor.getLong(
+                            cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR),
+                        )
+                        if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PENDING) {
+                            stalledPolls = if (bytesDownloaded > lastBytesDownloaded) 0 else stalledPolls + 1
+                            lastBytesDownloaded = bytesDownloaded
+                        } else {
+                            stalledPolls = 0
+                        }
+                        if (stalledPolls >= STALL_TIMEOUT_POLLS) {
+                            Logger.e {
+                                "Extension download $id stalled at $bytesDownloaded bytes, giving up"
+                            }
+                            DownloadManager.STATUS_FAILED
+                        } else {
+                            status
+                        }
                     }
                 } catch (_: Exception) {
                     null
@@ -231,7 +255,7 @@ internal class ExtensionInstaller(private val context: Context) {
                 val step = when (downloadState) {
                     DownloadManager.STATUS_PENDING -> InstallStep.Pending
                     DownloadManager.STATUS_RUNNING -> InstallStep.Downloading
-                    DownloadManager.STATUS_PAUSED -> InstallStep.Error
+                    DownloadManager.STATUS_PAUSED, DownloadManager.STATUS_FAILED -> InstallStep.Error
                     else -> return@flatMapConcat emptyFlow()
                 }
                 flowOf(ExtensionIntallInfo(step, null))
@@ -507,6 +531,9 @@ internal class ExtensionInstaller(private val context: Context) {
         const val APK_MIME = "application/vnd.android.package-archive"
         const val EXTRA_DOWNLOAD_ID = "ExtensionInstaller.extra.DOWNLOAD_ID"
         const val FILE_SCHEME = "file://"
+
+        /** How many 1s polls of zero byte progress before a RUNNING/PENDING download is given up on. */
+        const val STALL_TIMEOUT_POLLS = 90
     }
 }
 
