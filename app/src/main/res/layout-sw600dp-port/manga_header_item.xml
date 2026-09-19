@@ -39,6 +39,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/true_backdrop" />
 
     <View
+        android:id="@+id/backdrop_floor"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="?attr/background"
@@ -376,7 +377,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:background="@drawable/list_item_selector"
+        android:background="@drawable/list_item_selector_transparent"
         android:tooltipText="@string/sort_and_filter"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

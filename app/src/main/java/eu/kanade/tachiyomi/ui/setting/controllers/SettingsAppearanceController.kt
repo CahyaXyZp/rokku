@@ -137,6 +137,14 @@ class SettingsAppearanceController : SettingsLegacyController() {
                 titleRes = MR.strings.theme_buttons_based_on_cover
                 defaultValue = true
             }
+            switchPreference {
+                key = Keys.themeMangaDetailsBackground
+                titleRes = MR.strings.theme_background_based_on_cover
+                defaultValue = true
+                preferences.themeMangaDetails().changesIn(viewScope) { enabled ->
+                    isVisible = enabled
+                }
+            }
             intListPreference(activity) {
                 key = Keys.coverThemeStyle
                 titleRes = MR.strings.cover_theme_style

@@ -449,9 +449,10 @@ class MangaHeaderHolder(
             checked(!item.isLocked && manga.favorite)
             adapter.delegate.setFavButtonPopup(this)
         }
-        binding.trueBackdrop.setBackgroundColor(
-            adapter.delegate.coverColor()
-                ?: itemView.context.getResourceColor(R.attr.background),
+        val plainBackground = itemView.context.getResourceColor(R.attr.background)
+        updateBackdropColor(
+            adapter.delegate.coverColor() ?: plainBackground,
+            adapter.delegate.pageBackgroundColor() ?: plainBackground,
         )
 
         val tracked = presenter.isTracked() && !item.isLocked
@@ -682,7 +683,22 @@ class MangaHeaderHolder(
 
     fun setBackDrop(color: Int) {
         binding ?: return
-        binding.trueBackdrop.setBackgroundColor(color)
+        updateBackdropColor(color)
+    }
+
+    /**
+     * The backdrop below the cover fades into a flat filler view (backdrop_floor) that gives the
+     * header a solid floor to land on; that filler was hardcoded to the plain theme background,
+     * which blocked the page's tint from showing behind the buttons/synopsis/tags content that
+     * sits on top of it. [floorColor] is the same subtle tint used for the rest of the details
+     * screen (see MangaDetailsController#setBackgroundColorValue) so there's no seam between the
+     * two; [vividColor] stays the stronger colour used right behind the cover itself.
+     */
+    private fun updateBackdropColor(vividColor: Int, floorColor: Int = vividColor) {
+        binding ?: return
+        binding.trueBackdrop.setBackgroundColor(vividColor)
+        binding.backdropGradient.backgroundTintList = ColorStateList.valueOf(floorColor)
+        binding.backdropFloor.setBackgroundColor(floorColor)
     }
 
     fun updateColors(updateAll: Boolean = true) {
@@ -696,9 +712,10 @@ class MangaHeaderHolder(
         }
         val manga = adapter.presenter.manga
         with(binding) {
-            trueBackdrop.setBackgroundColor(
-                adapter.delegate.coverColor()
-                    ?: trueBackdrop.context.getResourceColor(R.attr.background),
+            val plainBackground = trueBackdrop.context.getResourceColor(R.attr.background)
+            updateBackdropColor(
+                adapter.delegate.coverColor() ?: plainBackground,
+                adapter.delegate.pageBackgroundColor() ?: plainBackground,
             )
             TextViewCompat.setCompoundDrawableTintList(moreButton, ColorStateList.valueOf(accentColor))
             moreButton.setTextColor(accentColor)

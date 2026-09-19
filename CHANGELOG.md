@@ -10,6 +10,9 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+### Additions
+- The manga details screen background now picks up a subtle tint from the cover, extending the accent already used for the header/buttons through the rest of the screen (toggle separately under Settings > Appearance > Details page > Theme page background based on cover)
+
 ### Changes
 - An automatic backup that fails because its saved location is no longer accessible (folder deleted, permission revoked, storage removed) now shows a notification telling you to pick a new one, instead of failing silently
 
