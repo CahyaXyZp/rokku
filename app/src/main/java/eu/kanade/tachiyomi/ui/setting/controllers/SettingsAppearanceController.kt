@@ -140,7 +140,7 @@ class SettingsAppearanceController : SettingsLegacyController() {
             switchPreference {
                 key = Keys.themeMangaDetailsBackground
                 titleRes = MR.strings.theme_background_based_on_cover
-                defaultValue = true
+                defaultValue = false
                 preferences.themeMangaDetails().changesIn(viewScope) { enabled ->
                     isVisible = enabled
                 }
