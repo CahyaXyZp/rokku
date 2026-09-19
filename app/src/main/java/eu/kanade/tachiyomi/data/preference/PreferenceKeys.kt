@@ -212,6 +212,8 @@ object PreferenceKeys {
 
     const val themeMangaDetails = "theme_manga_details"
 
+    const val themeMangaDetailsBackground = "theme_manga_details_background"
+
     const val coverThemeStyle = "pref_cover_theme_style"
 
     const val renderDescriptionImages = "render_description_images"

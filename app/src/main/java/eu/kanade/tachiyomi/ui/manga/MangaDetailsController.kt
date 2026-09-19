@@ -218,6 +218,7 @@ class MangaDetailsController :
     private var colorAnimator: ValueAnimator? = null
     override val presenter: MangaDetailsPresenter
     private var coverColor: Int? = null
+    private var pageBackgroundColor: Int? = null
     private var accentColor: Int? = null
     private var accentOnColor: Int? = null
     private var headerColor: Int? = null
@@ -271,9 +272,11 @@ class MangaDetailsController :
         if (presenter.preferences.themeMangaDetails().get() && isLegacyTheme && cachedColor != null) {
             setAccentColorValueLegacy(cachedColor)
             setHeaderColorValueLegacy(cachedColor, view.context)
+            setBackgroundColorValue(cachedColor)
         } else {
             setAccentColorValue()
             setHeaderColorValue()
+            setBackgroundColorValue()
         }
 
         setTabletMode(view)
@@ -375,6 +378,26 @@ class MangaDetailsController :
                     if (lumWrongForTheme) 0.9f else 0.7f,
                 )
             }
+    }
+
+    /**
+     * Subtle tint for the rest of the details screen (everything below the backdrop behind the
+     * cover): keeps the theme's own background saturation/luminance and only shifts its hue
+     * towards the cover's, so it stays as calm as a normal background instead of turning into a
+     * saturated flat colour once it's spread across the whole screen.
+     */
+    private fun setBackgroundColorValue(colorToUse: Int? = null) {
+        val context = view?.context ?: return
+        val baseBackground = context.getResourceColor(R.attr.background)
+        pageBackgroundColor = if (
+            presenter.preferences.themeMangaDetails().get() &&
+            presenter.preferences.themeMangaDetailsBackground().get()
+        ) {
+            (colorToUse ?: manga?.vibrantCoverColor)?.let { makeColorFrom(it, baseBackground) }
+        } else {
+            null
+        }
+        binding.swipeRefresh.setBackgroundColor(pageBackgroundColor ?: baseBackground)
     }
 
     private fun setRefreshStyle() {
@@ -703,6 +726,7 @@ class MangaDetailsController :
                                         manga?.vibrantCoverColor = seed
                                         setAccentColorValueLegacy(seed)
                                         setHeaderColorValueLegacy(seed, context)
+                                        setBackgroundColorValue(seed)
                                     } else {
                                         val hue = Hct.fromInt(seed).hue // 0-360
                                         // Picks between materialkolor's two color-generation specs (SPEC_2021
@@ -724,12 +748,14 @@ class MangaDetailsController :
                                         manga?.vibrantCoverColor = scheme.primary.toArgb()
                                         setAccentColorValue(scheme.primary.toArgb(), scheme.onPrimary.toArgb())
                                         setHeaderColorValue(scheme.primaryContainer.toArgb())
+                                        setBackgroundColorValue(scheme.primary.toArgb())
                                     }
                                     setItemColors()
                                 }
                             } else {
                                 setAccentColorValue()
                                 setHeaderColorValue()
+                                setBackgroundColorValue()
                                 coverColor?.let { color -> getHeader()?.setBackDrop(color) }
                                 setItemColors()
                             }
@@ -1639,6 +1665,7 @@ class MangaDetailsController :
 
     //region Interface methods
     override fun coverColor(): Int? = coverColor
+    override fun pageBackgroundColor(): Int? = pageBackgroundColor
     override fun accentColor(): Int? = accentColor
     override fun topCoverHeight(): Int = headerHeight
 

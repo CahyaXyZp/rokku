@@ -429,6 +429,7 @@ class PreferencesHelper(val context: Context, val preferenceStore: PreferenceSto
     fun showNsfwSources() = preferenceStore.getBoolean(Keys.showNsfwSource, true)
 
     fun themeMangaDetails() = preferenceStore.getBoolean(Keys.themeMangaDetails, true)
+    fun themeMangaDetailsBackground() = preferenceStore.getBoolean(Keys.themeMangaDetailsBackground, true)
     fun coverThemeStyle() = preferenceStore.getInt(Keys.coverThemeStyle, coverThemeOptions.indexOf(null))
 
     fun renderDescriptionImages() = preferenceStore.getBoolean(Keys.renderDescriptionImages, true)
