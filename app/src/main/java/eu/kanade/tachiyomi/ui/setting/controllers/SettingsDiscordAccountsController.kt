@@ -92,15 +92,20 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
             .setPositiveButton(AR.string.ok) { _, _ ->
                 val token = editText.text.toString().trim()
                 if (token.isBlank()) return@setPositiveButton
+                // fetchProfile does network I/O and must run off the main thread, but every
+                // call after it (toast, saving the account, rebuilding the screen) touches
+                // UI/main-thread-only APIs, so it's all funneled back through runOnUiThread.
                 viewScope.launchIO {
                     val account = connectionsManager.discord.fetchProfile(token)
-                    if (account != null) {
-                        connectionsManager.discord.addAccount(account)
-                        act.toast(MR.strings.discord_rpc_account_added)
-                    } else {
-                        act.toast(MR.strings.discord_rpc_account_add_failed)
+                    act.runOnUiThread {
+                        if (account != null) {
+                            connectionsManager.discord.addAccount(account)
+                            act.toast(MR.strings.discord_rpc_account_added)
+                        } else {
+                            act.toast(MR.strings.discord_rpc_account_add_failed)
+                        }
+                        refresh(screen)
                     }
-                    act.runOnUiThread { refresh(screen) }
                 }
             }
             .setNegativeButton(AR.string.cancel, null)
