@@ -1520,7 +1520,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
-        DiscordRPCService.start(this)
+        DiscordRPCService.start(this, sourceId = viewModel.manga?.source)
         updateDiscordActivity()
     }
 
@@ -1540,6 +1540,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 chapter.chapter_number.roundToInt().coerceAtLeast(1),
                 totalChapters,
                 manga.thumbnail_url,
+                manga.source,
             )
         }
     }
