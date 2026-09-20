@@ -11,6 +11,8 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.extension.ExtensionManager
+import eu.kanade.tachiyomi.source.isIncognitoModeForSource
 import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import uy.kohesive.injekt.Injekt
@@ -23,8 +25,9 @@ import yokai.util.lang.getString
 /**
  * Foreground service that keeps a Discord Gateway connection open and pushes Rich Presence
  * updates while the user is reading. Entirely optional: [start] no-ops unless the user has
- * enabled it in settings, provided an account token, and isn't in Incognito Mode - and
- * stopping it (or disabling the setting) never affects normal app operation.
+ * enabled it in settings, provided an account token, and isn't reading a source under
+ * Incognito Mode (global or per-extension) - and stopping it (or disabling the setting)
+ * never affects normal app operation.
  */
 class DiscordRPCService : Service() {
 
@@ -101,12 +104,14 @@ class DiscordRPCService : Service() {
 
         fun start(
             context: Context,
+            sourceId: Long? = null,
             connectionsManager: ConnectionsManager = Injekt.get(),
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
+            extensionManager: ExtensionManager = Injekt.get(),
         ) {
             if (!connectionsPreferences.enableDiscordRPC().get()) return
-            if (preferences.incognitoMode().get()) return
+            if (isIncognitoModeForSource(sourceId, preferences, extensionManager)) return
 
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
             if (token.isBlank()) {
@@ -133,12 +138,17 @@ class DiscordRPCService : Service() {
 
         fun restart(
             context: Context,
+            sourceId: Long? = null,
             connectionsManager: ConnectionsManager = Injekt.get(),
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
+            extensionManager: ExtensionManager = Injekt.get(),
         ) {
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            if (!connectionsPreferences.enableDiscordRPC().get() || preferences.incognitoMode().get() || token.isBlank()) {
+            val blocked = !connectionsPreferences.enableDiscordRPC().get() ||
+                isIncognitoModeForSource(sourceId, preferences, extensionManager) ||
+                token.isBlank()
+            if (blocked) {
                 if (token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
@@ -157,8 +167,8 @@ class DiscordRPCService : Service() {
          * State "Chapter [currentChapter] of [totalChapters]", Timestamp elapsed since the
          * service started. The large image is the manga's own cover ([coverUrl]); the app
          * icon is only ever attached as a small badge on top of it, and only when "Show app
-         * icon" is enabled. No-ops (leaves any prior activity as-is) while Incognito Mode is
-         * active.
+         * icon" is enabled. No-ops while [sourceId] is under Incognito Mode (global or
+         * per-extension).
          */
         fun setReadingActivity(
             context: Context,
@@ -166,11 +176,13 @@ class DiscordRPCService : Service() {
             currentChapter: Int,
             totalChapters: Int,
             coverUrl: String?,
+            sourceId: Long? = null,
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
+            extensionManager: ExtensionManager = Injekt.get(),
         ) {
             val activeRpc = rpc ?: return
-            if (preferences.incognitoMode().get()) return
+            if (isIncognitoModeForSource(sourceId, preferences, extensionManager)) return
             launchIO {
                 val appName = context.getString(MR.strings.app_name)
                 val customName = connectionsPreferences.discordCustomActivityName().get()
