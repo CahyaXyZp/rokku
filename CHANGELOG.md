@@ -34,10 +34,12 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed extension updates getting stuck showing "Downloading" forever when Android's DownloadManager silently failed a download or stalled without ever reaching a terminal state
 - Fixed a crash copying a manga cover to the clipboard (a raw `file://` URI was exposed outside the app instead of a `content://` one)
 - Fixed a source's text filters swapping or losing their typed values when scrolling the filter list, caused by recycled rows accumulating listeners from earlier filters ([@Hiirbaf](https://github.com/Hiirbaf))
+- Fixed saving a reader page (or a merged double-page spread) to storage failing with a confusing error when the destination file couldn't be created
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
 - Reduced Crashlytics noise by no longer reporting a dead or misconfigured extension repo (HTTP 404 on its `repo.json` or index) as a non-fatal error
+- Reduced Crashlytics noise by no longer reporting the extension repo/store being rate-limited (HTTP 429) as a non-fatal error (it already falls back to the legacy index)
 - Reduced Crashlytics noise by no longer reporting cover-loading, reader, browse, and backup failures that only reflect a source, the network, or the device misbehaving rather than a Rokku bug
 - Reduced Crashlytics noise further: handled extension-repo fetch failures, call timeouts/cancellations, dropped connections, unresolved WebView challenges, and broken local-library folders are no longer reported
 - Reduced Crashlytics noise by no longer reporting a JSON parse failure caused by a source answering with an HTML page (Cloudflare interstitial or error page) instead of data

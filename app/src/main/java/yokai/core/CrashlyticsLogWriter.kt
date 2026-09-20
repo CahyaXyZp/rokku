@@ -48,9 +48,11 @@ class CrashlyticsLogWriter : LogWriter() {
      * (normal control flow), pure device/network connectivity failures (DNS, timeout,
      * TLS handshake, connection reset), a source's own server erroring out (5xx, whether
      * raised via our own HttpException or a source/extension's own HTTP client),
-     * rejecting auth (401/403), or answering 404 for a resource that isn't there (a
+     * rejecting auth (401/403), answering 404 for a resource that isn't there (a
      * dead or misconfigured extension repo URL, or a legacy repo with no repo.json -
-     * ExtensionApi and ExtensionRepoService both fall back cleanly), and the user's
+     * ExtensionApi and ExtensionRepoService both fall back cleanly), or rate-limiting a
+     * request (429 - ExtensionApi.fetchStoreExtensions already falls back to the legacy
+     * index), and the user's
      * downloads folder, a downloaded page file, or the backup destination
      * (BackupCreateException) becoming inaccessible (permission revoked, file/folder
      * moved/deleted, storage removed - the backup failure is still shown to the user as a
@@ -131,7 +133,7 @@ class CrashlyticsLogWriter : LogWriter() {
                 is NoPagesException,
                 -> return true
 
-                is HttpException -> if (current.isAuthError || current.isServerError || current.code == 404) return true
+                is HttpException -> if (current.isAuthError || current.isServerError || current.code == 404 || current.code == 429) return true
 
                 is HttpStatusException -> if (current.statusCode in 500..599 || current.statusCode == 404) return true
 
