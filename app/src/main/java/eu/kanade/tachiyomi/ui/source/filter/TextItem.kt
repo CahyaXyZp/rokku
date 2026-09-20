@@ -27,14 +27,21 @@ open class TextItem(val filter: Filter.Text) : AbstractFlexibleItem<TextItem.Hol
 
     override fun bindViewHolder(adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>, holder: Holder, position: Int, payloads: MutableList<Any?>?) {
         holder.wrapper.hint = filter.name
-        holder.edit.setText(filter.state)
-        holder.edit.addTextChangedListener(
-            object : SimpleTextWatcher() {
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                    filter.state = s.toString()
-                }
-            },
-        )
+
+        holder.watcher?.let { holder.edit.removeTextChangedListener(it) }
+
+        if (holder.edit.text.toString() != filter.state) {
+            holder.edit.setText(filter.state)
+            holder.edit.setSelection(holder.edit.text?.length ?: 0)
+        }
+
+        val watcher = object : SimpleTextWatcher() {
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                filter.state = s.toString()
+            }
+        }
+        holder.edit.addTextChangedListener(watcher)
+        holder.watcher = watcher
     }
 
     override fun equals(other: Any?): Boolean {
@@ -54,5 +61,6 @@ open class TextItem(val filter: Filter.Text) : AbstractFlexibleItem<TextItem.Hol
 
         val wrapper: TextInputLayout = itemView.findViewById(R.id.nav_view_item_wrapper)
         val edit: EditText = itemView.findViewById(R.id.nav_view_item)
+        var watcher: android.text.TextWatcher? = null
     }
 }

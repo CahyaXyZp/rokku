@@ -32,6 +32,7 @@ import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
 import androidx.core.animation.addListener
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isInvisible
@@ -47,6 +48,7 @@ import dev.icerock.moko.resources.compose.stringResource
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.databinding.FullCoverDialogBinding
+import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.clipboardHasImage
 import eu.kanade.tachiyomi.util.system.clipboardManager
 import eu.kanade.tachiyomi.util.system.dpToPx
@@ -471,7 +473,7 @@ class FullCoverDialog(val controller: MangaDetailsController, drawable: Drawable
     }
 
     private fun copyCoverToClipboard() {
-        val uri = controller.presenter.shareCover() ?: return
+        val uri = controller.presenter.shareCover()?.toFile()?.getUriCompat(context) ?: return
         context.clipboardManager.setPrimaryClip(ClipData.newUri(context.contentResolver, "Cover", uri))
     }
 
