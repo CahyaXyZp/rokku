@@ -99,10 +99,21 @@ class Discord(id: Long) : ConnectionsService(id) {
         saveAccounts(accounts)
     }
 
+    /**
+     * Removes the account, clearing the stored token and stopping the RPC service if it was the
+     * active one - otherwise the stale token would be left behind and RPC would keep failing to
+     * reconnect with credentials that no longer correspond to any saved account.
+     */
     fun removeAccount(accountId: String) {
         val accounts = getAccounts().toMutableList()
+        val removed = accounts.find { it.id == accountId }
         accounts.removeAll { it.id == accountId }
         saveAccounts(accounts)
+
+        if (removed?.isActive == true) {
+            connectionsPreferences.connectionsToken(this).delete()
+            DiscordRPCService.stop(Injekt.get<Application>())
+        }
     }
 
     fun setActiveAccount(accountId: String) {
