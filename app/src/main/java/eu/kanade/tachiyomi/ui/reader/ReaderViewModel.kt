@@ -854,7 +854,7 @@ class ReaderViewModel(
         ) + (if (downloadPreferences.downloadWithId().get()) " (${chapter.id})" else "") +
             " - ${page.number}.${type.extension}"
 
-        val destFile = directory.createFile(filename)!!
+        val destFile = directory.createFile(filename) ?: throw Exception("Could not create destination file")
         stream().use { input ->
             destFile.openOutputStream().use { output ->
                 input.copyTo(output)
@@ -895,7 +895,7 @@ class ReaderViewModel(
         ) + (if (downloadPreferences.downloadWithId().get()) " (${chapter.id})" else "") +
             " - ${page1.number}-${page2.number}.jpg"
 
-        val destFile = directory.createFile(filename)!!
+        val destFile = directory.createFile(filename) ?: throw Exception("Could not create destination file")
         stream.use { input ->
             destFile.openOutputStream().use { output ->
                 input.copyTo(output)
