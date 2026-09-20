@@ -2203,7 +2203,7 @@ class MangaDetailsController :
 
     private fun copyCoverToClipboard() {
         val context = view?.context ?: return
-        val cover = presenter.shareCover() ?: return
+        val cover = presenter.shareCover()?.toFile()?.getUriCompat(context) ?: return
         context.clipboardManager.setPrimaryClip(ClipData.newUri(context.contentResolver, "Cover", cover))
     }
 
