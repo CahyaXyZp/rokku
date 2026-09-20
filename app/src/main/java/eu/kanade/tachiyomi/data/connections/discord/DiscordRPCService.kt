@@ -10,6 +10,7 @@ import co.touchlab.kermit.Logger
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import uy.kohesive.injekt.Injekt
@@ -22,8 +23,8 @@ import yokai.util.lang.getString
 /**
  * Foreground service that keeps a Discord Gateway connection open and pushes Rich Presence
  * updates while the user is reading. Entirely optional: [start] no-ops unless the user has
- * enabled it in settings and provided an account token, and stopping it (or disabling the
- * setting) never affects normal app operation.
+ * enabled it in settings, provided an account token, and isn't in Incognito Mode - and
+ * stopping it (or disabling the setting) never affects normal app operation.
  */
 class DiscordRPCService : Service() {
 
@@ -102,8 +103,10 @@ class DiscordRPCService : Service() {
             context: Context,
             connectionsManager: ConnectionsManager = Injekt.get(),
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+            preferences: PreferencesHelper = Injekt.get(),
         ) {
             if (!connectionsPreferences.enableDiscordRPC().get()) return
+            if (preferences.incognitoMode().get()) return
 
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
             if (token.isBlank()) {
@@ -132,9 +135,10 @@ class DiscordRPCService : Service() {
             context: Context,
             connectionsManager: ConnectionsManager = Injekt.get(),
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+            preferences: PreferencesHelper = Injekt.get(),
         ) {
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            if (!connectionsPreferences.enableDiscordRPC().get() || token.isBlank()) {
+            if (!connectionsPreferences.enableDiscordRPC().get() || preferences.incognitoMode().get() || token.isBlank()) {
                 if (token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
@@ -151,22 +155,32 @@ class DiscordRPCService : Service() {
         /**
          * Updates the Rich Presence: Activity "Watching", Details [title],
          * State "Chapter [currentChapter] of [totalChapters]", Timestamp elapsed since the
-         * service started. The activity's name (shown right after "Watching") and whether the
-         * app icon is attached as the large image both follow user preferences.
+         * service started. The large image is the manga's own cover ([coverUrl]); the app
+         * icon is only ever attached as a small badge on top of it, and only when "Show app
+         * icon" is enabled. No-ops (leaves any prior activity as-is) while Incognito Mode is
+         * active.
          */
         fun setReadingActivity(
             context: Context,
             title: String,
             currentChapter: Int,
             totalChapters: Int,
+            coverUrl: String?,
             connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+            preferences: PreferencesHelper = Injekt.get(),
         ) {
             val activeRpc = rpc ?: return
+            if (preferences.incognitoMode().get()) return
             launchIO {
                 val appName = context.getString(MR.strings.app_name)
                 val customName = connectionsPreferences.discordCustomActivityName().get()
                 val showAppIcon = connectionsPreferences.discordShowAppIcon().get()
-                val largeImage = if (showAppIcon) activeRpc.resolveAppIcon() else null
+                val largeImage = coverUrl?.let { activeRpc.resolveAsset(it) }
+                val smallImage = if (largeImage != null && showAppIcon) {
+                    activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
+                } else {
+                    null
+                }
                 activeRpc.updateRPC(
                     activity = Activity(
                         name = customName.ifBlank { appName },
@@ -174,7 +188,14 @@ class DiscordRPCService : Service() {
                         state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters),
                         type = ActivityType.WATCHING.value,
                         timestamps = Activity.Timestamps(start = since),
-                        assets = largeImage?.let { Activity.Assets(largeImage = it, largeText = appName) },
+                        assets = largeImage?.let {
+                            Activity.Assets(
+                                largeImage = it,
+                                largeText = title,
+                                smallImage = smallImage,
+                                smallText = smallImage?.let { appName },
+                            )
+                        },
                     ),
                     since = since,
                 )
