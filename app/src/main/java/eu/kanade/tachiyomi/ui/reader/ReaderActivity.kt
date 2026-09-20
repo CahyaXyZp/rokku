@@ -1539,6 +1539,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 manga.title,
                 chapter.chapter_number.roundToInt().coerceAtLeast(1),
                 totalChapters,
+                manga.thumbnail_url,
             )
         }
     }
