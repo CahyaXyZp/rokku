@@ -19,15 +19,17 @@ class DiscordRPC(private val token: String) {
         json = Injekt.get(),
     )
 
-    private var appIconAssetPath: String? = null
+    private val assetCache = mutableMapOf<String, String?>()
 
     /**
-     * Resolves the app icon into a Discord "mp:" asset path usable as a large image, caching
-     * the result for the lifetime of this RPC session. Returns null if the exchange fails.
+     * Resolves [imageUrl] into a Discord "mp:" asset path usable as a large/small image,
+     * caching the result per URL for the lifetime of this RPC session (e.g. the app icon
+     * never changes mid-session, and a manga's cover URL is re-requested every chapter
+     * update). Returns null if the exchange fails.
      */
-    suspend fun resolveAppIcon(): String? {
-        appIconAssetPath?.let { return it }
-        return externalAsset.getDiscordUri(RICH_PRESENCE_APP_ICON_URL).also { appIconAssetPath = it }
+    suspend fun resolveAsset(imageUrl: String): String? {
+        assetCache[imageUrl]?.let { return it }
+        return externalAsset.getDiscordUri(imageUrl).also { assetCache[imageUrl] = it }
     }
 
     /**
