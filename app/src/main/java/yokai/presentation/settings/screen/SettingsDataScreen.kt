@@ -1,7 +1,6 @@
 package yokai.presentation.settings.screen
 
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -126,15 +125,18 @@ object SettingsDataScreen : ComposableSettings() {
         val storageManager = remember { Injekt.get<StorageManager>() }
 
         val chooseBackup = rememberLauncherForActivityResult(
-            object : ActivityResultContracts.GetContent() {
-                override fun createIntent(context: Context, input: String): Intent {
-                    val intent = super.createIntent(context, input)
-                    intent.addCategory(Intent.CATEGORY_OPENABLE)
-                    return Intent.createChooser(intent, context.getString(MR.strings.select_backup_file))
-                }
-            },
+            ActivityResultContracts.OpenDocument(),
         ) {
             if (it == null) return@rememberLauncherForActivityResult
+
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (e: SecurityException) {
+                Logger.e(e) { "Unable to persist backup file URI permission" }
+            }
 
             val results = try {
                 Pair(BackupFileValidator().validate(context, it), null)
@@ -207,7 +209,7 @@ object SettingsDataScreen : ComposableSettings() {
                                             }
 
                                             scope.launch { extensionManager.getExtensionUpdates(true) }
-                                            chooseBackup.launch("*/*")
+                                            chooseBackup.launch(arrayOf("*/*"))
                                         } else {
                                             context.toast(MR.strings.restore_in_progress)
                                         }
