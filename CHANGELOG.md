@@ -12,6 +12,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ### Additions
 - The manga details screen background can now pick up a subtle tint from the cover, extending the accent already used for the header/buttons through the rest of the screen (off by default, toggle separately under Settings > Appearance > Details page > Theme background based on cover)
+- Local source now reads Year, Month, and Day fields from a chapter's ComicInfo.xml to set its displayed date, and downloaded chapters now write these fields when generating ComicInfo.xml
 
 ### Changes
 - An automatic backup that fails because its saved location is no longer accessible (folder deleted, permission revoked, storage removed) now shows a notification telling you to pick a new one, instead of failing silently
@@ -34,13 +35,18 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed extension updates getting stuck showing "Downloading" forever when Android's DownloadManager silently failed a download or stalled without ever reaching a terminal state
 - Fixed a crash copying a manga cover to the clipboard (a raw `file://` URI was exposed outside the app instead of a `content://` one)
 - Fixed a source's text filters swapping or losing their typed values when scrolling the filter list, caused by recycled rows accumulating listeners from earlier filters ([@Hiirbaf](https://github.com/Hiirbaf))
+- Fixed saving a reader page (or a merged double-page spread) to storage failing with a confusing error when the destination file couldn't be created
+- Fixed the backup restore file picker relying on an outdated file selection API that could fail to open correctly on some devices
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
+- `HttpSource`'s template methods (`popularMangaRequest`/`Parse`, `searchMangaRequest`/`Parse`, `latestUpdatesRequest`/`Parse`, `mangaDetailsParse`, `chapterListParse`, `chapterPageParse`, `pageListParse`, `imageUrlParse`) are no longer required to be implemented by extensions, and a new `getHomeUrl()` lets a source report a home page different from its `baseUrl` for "Open in WebView"
 - Reduced Crashlytics noise by no longer reporting a dead or misconfigured extension repo (HTTP 404 on its `repo.json` or index) as a non-fatal error
+- Reduced Crashlytics noise by no longer reporting the extension repo/store being rate-limited (HTTP 429) as a non-fatal error (it already falls back to the legacy index)
 - Reduced Crashlytics noise by no longer reporting cover-loading, reader, browse, and backup failures that only reflect a source, the network, or the device misbehaving rather than a Rokku bug
 - Reduced Crashlytics noise further: handled extension-repo fetch failures, call timeouts/cancellations, dropped connections, unresolved WebView challenges, and broken local-library folders are no longer reported
 - Reduced Crashlytics noise by no longer reporting a JSON parse failure caused by a source answering with an HTML page (Cloudflare interstitial or error page) instead of data
+- Bumped compileSdk to 37.2
 
 ## [1.7.1]
 

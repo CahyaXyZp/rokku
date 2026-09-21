@@ -8,7 +8,9 @@ kotlin {
     android {
         namespace = "yokai.domain"
         minSdk = AndroidConfig.MIN_SDK
-        compileSdk = AndroidConfig.COMPILE_SDK
+        compileSdk {
+            version = release(AndroidConfig.COMPILE_SDK) { minorApiLevel = AndroidConfig.COMPILE_SDK_MINOR }
+        }
         enableCoreLibraryDesugaring = true
         // AGP 9's KMP library target dropped testInstrumentationRunner from this flattened
         // block; commonTest below only needs a host (JVM) test run, not on-device instrumentation.

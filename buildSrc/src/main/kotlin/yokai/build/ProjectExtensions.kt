@@ -34,6 +34,7 @@ val Project.generatedBuildDir: File get() = project.layout.buildDirectory.asFile
 internal fun Project.configureAndroid(commonExtension: CommonExtension) {
     commonExtension.apply {
         compileSdk = AndroidConfig.COMPILE_SDK
+        compileSdkMinor = AndroidConfig.COMPILE_SDK_MINOR
         defaultConfig {
             minSdk = AndroidConfig.MIN_SDK
             ndkVersion = AndroidConfig.NDK
