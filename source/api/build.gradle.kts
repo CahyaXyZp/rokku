@@ -10,7 +10,9 @@ kotlin {
     android {
         namespace = "eu.kanade.tachiyomi.source"
         minSdk = AndroidConfig.MIN_SDK
-        compileSdk = AndroidConfig.COMPILE_SDK
+        compileSdk {
+            version = release(AndroidConfig.COMPILE_SDK) { minorApiLevel = AndroidConfig.COMPILE_SDK_MINOR }
+        }
         enableCoreLibraryDesugaring = true
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
