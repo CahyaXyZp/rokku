@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import nl.adaptivity.xmlutil.serialization.XmlValue
+import java.time.Instant
+import java.time.ZoneId
 
 const val COMIC_INFO_EDITS_FILE = "ComicInfoEdits.xml"
 const val COMIC_INFO_FILE = "ComicInfo.xml"
@@ -17,34 +19,43 @@ fun getComicInfo(
     categories: List<String>?,
     sourceName: String,
     lang: String?,
-) = ComicInfo(
-    title = ComicInfo.Title(chapter.name.stripNonValidXML1_0Characters()),
-    series = ComicInfo.Series(manga.title.stripNonValidXML1_0Characters()),
-    number = chapter.chapter_number.takeIf { it >= 0 }?.let {
-        if (it.rem(1) == 0.0f) {
-            ComicInfo.Number(it.toInt().toString())
-        } else {
-            ComicInfo.Number(it.toString())
-        }
-    },
-    summary = manga.description?.let { ComicInfo.Summary(it.stripNonValidXML1_0Characters()) },
-    writer = manga.author?.let { ComicInfo.Writer(it.stripNonValidXML1_0Characters()) },
-    penciller = manga.artist?.let { ComicInfo.Penciller(it.stripNonValidXML1_0Characters()) },
-    inker = null,
-    colorist = null,
-    letterer = null,
-    coverArtist = null,
-    translator = chapter.scanlator?.let { ComicInfo.Translator(it.stripNonValidXML1_0Characters()) },
-    genre = manga.genre?.let { ComicInfo.Genre(it.stripNonValidXML1_0Characters()) },
-    tags = null,
-    web = ComicInfo.Web(urls.joinToString(" ")),
-    publishingStatus = ComicInfo.PublishingStatusTachiyomi(
-        ComicInfoPublishingStatus.toComicInfoValue(manga.status.toLong()),
-    ),
-    categories = categories?.let { ComicInfo.CategoriesTachiyomi(it.joinToString()) },
-    source = ComicInfo.SourceMihon(sourceName),
-    language = lang?.let { ComicInfo.LanguageJ2K(it) },
-)
+): ComicInfo {
+    val date = chapter.date_upload
+        .takeIf { it != 0L }
+        ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
+
+    return ComicInfo(
+        title = ComicInfo.Title(chapter.name.stripNonValidXML1_0Characters()),
+        series = ComicInfo.Series(manga.title.stripNonValidXML1_0Characters()),
+        number = chapter.chapter_number.takeIf { it >= 0 }?.let {
+            if (it.rem(1) == 0.0f) {
+                ComicInfo.Number(it.toInt().toString())
+            } else {
+                ComicInfo.Number(it.toString())
+            }
+        },
+        summary = manga.description?.let { ComicInfo.Summary(it.stripNonValidXML1_0Characters()) },
+        writer = manga.author?.let { ComicInfo.Writer(it.stripNonValidXML1_0Characters()) },
+        penciller = manga.artist?.let { ComicInfo.Penciller(it.stripNonValidXML1_0Characters()) },
+        inker = null,
+        colorist = null,
+        letterer = null,
+        coverArtist = null,
+        translator = chapter.scanlator?.let { ComicInfo.Translator(it.stripNonValidXML1_0Characters()) },
+        genre = manga.genre?.let { ComicInfo.Genre(it.stripNonValidXML1_0Characters()) },
+        tags = null,
+        web = ComicInfo.Web(urls.joinToString(" ")),
+        publishingStatus = ComicInfo.PublishingStatusTachiyomi(
+            ComicInfoPublishingStatus.toComicInfoValue(manga.status.toLong()),
+        ),
+        categories = categories?.let { ComicInfo.CategoriesTachiyomi(it.joinToString()) },
+        source = ComicInfo.SourceMihon(sourceName),
+        language = lang?.let { ComicInfo.LanguageJ2K(it) },
+        year = date?.year?.let { ComicInfo.Year(it) },
+        month = date?.monthValue?.let { ComicInfo.Month(it) },
+        day = date?.dayOfMonth?.let { ComicInfo.Day(it) },
+    )
+}
 
 fun SManga.toComicInfo(lang: String? = null) = ComicInfo(
     title = null,
@@ -67,6 +78,9 @@ fun SManga.toComicInfo(lang: String? = null) = ComicInfo(
     categories = null,
     source = null,
     language = lang?.let { ComicInfo.LanguageJ2K(it) },
+    year = null,
+    month = null,
+    day = null,
 )
 
 fun SManga.copyFromComicInfo(comicInfo: ComicInfo) {
@@ -123,6 +137,9 @@ data class ComicInfo(
     val categories: CategoriesTachiyomi?,
     val source: SourceMihon?,
     val language: LanguageJ2K?,
+    val year: Year?,
+    val month: Month?,
+    val day: Day?,
 ) {
     @XmlElement(false)
     @XmlSerialName("xmlns:xsd", "", "")
@@ -187,6 +204,18 @@ data class ComicInfo(
     @Serializable
     @XmlSerialName("Web", "", "")
     data class Web(@XmlValue(true) val value: String = "")
+
+    @Serializable
+    @XmlSerialName("Year", "", "")
+    data class Year(@XmlValue(true) val value: Int = -1)
+
+    @Serializable
+    @XmlSerialName("Month", "", "")
+    data class Month(@XmlValue(true) val value: Int = -1)
+
+    @Serializable
+    @XmlSerialName("Day", "", "")
+    data class Day(@XmlValue(true) val value: Int = -1)
 
     // Tachi Note: The spec doesn't have a good field for this
     // REF: https://github.com/anansi-project/comicinfo/issues/5

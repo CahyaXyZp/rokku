@@ -264,6 +264,9 @@ class CustomMangaManager(val context: Context) {
                             categories = null,
                             source = null,
                             language = null,
+                            year = null,
+                            month = null,
+                            day = null,
                         ),
                     )
                 }

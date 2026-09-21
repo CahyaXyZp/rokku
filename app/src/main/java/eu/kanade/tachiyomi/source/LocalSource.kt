@@ -43,6 +43,9 @@ import yokai.util.lang.getString
 import java.io.FileInputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
+import java.time.DateTimeException
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 class LocalSource(private val context: Context) : CatalogueSource, UnmeteredSource {
@@ -129,6 +132,18 @@ class LocalSource(private val context: Context) : CatalogueSource, UnmeteredSour
                 comicInfo.number?.value?.toFloatOrNull()
                     ?: ChapterRecognition.parseChapterNumber(chapter.name, manga.title, chapter.chapter_number)
             comicInfo.translator?.let { chapter.scanlator = it.value }
+
+            // only bother with partial dates if the year is not null, abandon date parsing otherwise
+            val year = comicInfo.year?.value?.takeIf { it > 0 }?.toString()?.padStart(4, '0') ?: return
+            val month = (comicInfo.month?.value?.coerceIn(1, 12) ?: 1).toString().padStart(2, '0')
+            val day = (comicInfo.day?.value?.coerceIn(1, 31) ?: 1).toString().padStart(2, '0')
+
+            try {
+                val date = LocalDate.parse("$year-$month-$day")
+                chapter.date_upload = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            } catch (e: DateTimeException) {
+                Logger.e(e) { "Unable to parse ComicInfo date for ${chapter.name}" }
+            }
         }
 
         /**
