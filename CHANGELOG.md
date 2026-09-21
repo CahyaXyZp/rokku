@@ -40,6 +40,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
+- `HttpSource`'s template methods (`popularMangaRequest`/`Parse`, `searchMangaRequest`/`Parse`, `latestUpdatesRequest`/`Parse`, `mangaDetailsParse`, `chapterListParse`, `chapterPageParse`, `pageListParse`, `imageUrlParse`) are no longer required to be implemented by extensions, and a new `getHomeUrl()` lets a source report a home page different from its `baseUrl` for "Open in WebView"
 - Reduced Crashlytics noise by no longer reporting a dead or misconfigured extension repo (HTTP 404 on its `repo.json` or index) as a non-fatal error
 - Reduced Crashlytics noise by no longer reporting the extension repo/store being rate-limited (HTTP 429) as a non-fatal error (it already falls back to the legacy index)
 - Reduced Crashlytics noise by no longer reporting cover-loading, reader, browse, and backup failures that only reflect a source, the network, or the device misbehaving rather than a Rokku bug
