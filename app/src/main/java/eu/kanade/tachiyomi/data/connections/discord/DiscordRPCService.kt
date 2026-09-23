@@ -23,11 +23,16 @@ import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Foreground service that keeps a Discord Gateway connection open and pushes Rich Presence
- * updates while the user is reading. Entirely optional: [start] no-ops unless the user has
- * enabled it in settings, provided an account token, and isn't reading a source under
- * Incognito Mode (global or per-extension) - and stopping it (or disabling the setting)
- * never affects normal app operation.
+ * Foreground service that keeps Discord Rich Presence updated while the user is reading.
+ * Entirely optional: [start] no-ops unless the user has enabled it in settings, has an active
+ * account, and isn't reading a source under Incognito Mode (global or per-extension) - and
+ * stopping it (or disabling the setting) never affects normal app operation.
+ *
+ * Backs onto whichever connection the active account's [DiscordAuthMethod] calls for:
+ * [DiscordRPC] (a Discord Gateway connection over the account's token) for Token Login accounts,
+ * or [DiscordRpcManager] (the official Social SDK, over JNI) for accounts added via the SDK.
+ * One active account at a time for now - multi-account (Rich Presence for every connected
+ * account at once) is a planned follow-up.
  */
 class DiscordRPCService : Service() {
 
@@ -38,21 +43,21 @@ class DiscordRPCService : Service() {
         super.onCreate()
         Logger.i { "Starting Discord RPC service" }
 
+        val account = connectionsManager.discord.getAccounts().find { it.isActive }
         val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-        if (token.isBlank()) {
-            Logger.w { "Discord RPC disabled due to missing token" }
+        if (account == null || token.isBlank()) {
+            Logger.w { "Discord RPC disabled due to missing account/token" }
             connectionsPreferences.enableDiscordRPC().set(false)
             stopSelf()
             return
         }
 
         startForeground(Notifications.ID_DISCORD_RPC, notification())
-        rpc = DiscordRPC(token)
+        connectUsing(account, token)
     }
 
     override fun onDestroy() {
-        rpc?.closeRPC()
-        rpc = null
+        disconnect()
         super.onDestroy()
     }
 
@@ -71,17 +76,43 @@ class DiscordRPCService : Service() {
     }
 
     private fun restartRPC() {
-        rpc?.closeRPC()
-        rpc = null
+        disconnect()
 
+        val account = connectionsManager.discord.getAccounts().find { it.isActive }
         val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-        if (token.isBlank()) {
-            Logger.w { "Discord RPC restart failed due to missing token" }
+        if (account == null || token.isBlank()) {
+            Logger.w { "Discord RPC restart failed due to missing account/token" }
             stopSelf()
             return
         }
 
-        rpc = DiscordRPC(token)
+        connectUsing(account, token)
+    }
+
+    private fun connectUsing(account: DiscordAccount, token: String) {
+        when (account.authMethod) {
+            DiscordAuthMethod.SDK -> {
+                usingSdk = true
+                if (!DiscordRpcManager.isInitialized()) {
+                    DiscordRpcManager.init()
+                }
+                DiscordRpcManager.reconnectWithToken(token)
+            }
+            DiscordAuthMethod.TOKEN -> {
+                usingSdk = false
+                rpc = DiscordRPC(token)
+            }
+        }
+    }
+
+    private fun disconnect() {
+        if (usingSdk) {
+            DiscordRpcManager.disconnect()
+        } else {
+            rpc?.closeRPC()
+        }
+        rpc = null
+        usingSdk = false
     }
 
     private fun notification(): Notification {
@@ -97,10 +128,13 @@ class DiscordRPCService : Service() {
 
     companion object {
         private var rpc: DiscordRPC? = null
+        private var usingSdk = false
         private var since = 0L
 
         private const val ACTION_RESTART = "eu.kanade.tachiyomi.DISCORD_RPC_RESTART"
         private const val ACTION_STOP = "eu.kanade.tachiyomi.DISCORD_RPC_STOP"
+
+        private fun isConnected() = rpc != null || usingSdk
 
         fun start(
             context: Context,
@@ -113,14 +147,15 @@ class DiscordRPCService : Service() {
             if (!connectionsPreferences.enableDiscordRPC().get()) return
             if (isIncognitoModeForSource(sourceId, preferences, extensionManager)) return
 
+            val account = connectionsManager.discord.getAccounts().find { it.isActive }
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            if (token.isBlank()) {
-                Logger.w { "Discord RPC not started due to missing token" }
+            if (account == null || token.isBlank()) {
+                Logger.w { "Discord RPC not started due to missing account/token" }
                 connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
 
-            if (rpc == null) {
+            if (!isConnected()) {
                 since = System.currentTimeMillis()
                 context.startForegroundService(Intent(context, DiscordRPCService::class.java))
             }
@@ -144,12 +179,13 @@ class DiscordRPCService : Service() {
             preferences: PreferencesHelper = Injekt.get(),
             extensionManager: ExtensionManager = Injekt.get(),
         ) {
+            val account = connectionsManager.discord.getAccounts().find { it.isActive }
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
             val blocked = !connectionsPreferences.enableDiscordRPC().get() ||
                 isIncognitoModeForSource(sourceId, preferences, extensionManager) ||
-                token.isBlank()
+                account == null || token.isBlank()
             if (blocked) {
-                if (token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
+                if (account == null || token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
 
@@ -181,36 +217,60 @@ class DiscordRPCService : Service() {
             preferences: PreferencesHelper = Injekt.get(),
             extensionManager: ExtensionManager = Injekt.get(),
         ) {
-            val activeRpc = rpc ?: return
+            if (!isConnected()) return
             if (isIncognitoModeForSource(sourceId, preferences, extensionManager)) return
             launchIO {
                 val appName = context.getString(MR.strings.app_name)
                 val customName = connectionsPreferences.discordCustomActivityName().get()
                 val showAppIcon = connectionsPreferences.discordShowAppIcon().get()
-                val largeImage = coverUrl?.let { activeRpc.resolveAsset(it) }
-                val smallImage = if (largeImage != null && showAppIcon) {
-                    activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
+                val name = customName.ifBlank { appName }
+                val state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters)
+
+                if (usingSdk) {
+                    // The native SDK takes image URLs directly rather than the pre-resolved
+                    // asset IDs the Gateway-based RPCExternalAsset flow needs - unverified
+                    // against a real device/account yet, worth double-checking that Discord
+                    // actually renders a bare https cover URL as the large image here.
+                    val smallImage = if (coverUrl != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
+                    DiscordRpcManager.setActivity(
+                        DiscordNativeActivity(
+                            name = name,
+                            details = title,
+                            state = state,
+                            startTimestamp = since,
+                            largeImage = coverUrl,
+                            largeText = title,
+                            smallImage = smallImage,
+                            smallText = smallImage?.let { appName },
+                        ),
+                    )
                 } else {
-                    null
+                    val activeRpc = rpc ?: return@launchIO
+                    val largeImage = coverUrl?.let { activeRpc.resolveAsset(it) }
+                    val smallImage = if (largeImage != null && showAppIcon) {
+                        activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
+                    } else {
+                        null
+                    }
+                    activeRpc.updateRPC(
+                        activity = Activity(
+                            name = name,
+                            details = title,
+                            state = state,
+                            type = ActivityType.WATCHING.value,
+                            timestamps = Activity.Timestamps(start = since),
+                            assets = largeImage?.let {
+                                Activity.Assets(
+                                    largeImage = it,
+                                    largeText = title,
+                                    smallImage = smallImage,
+                                    smallText = smallImage?.let { appName },
+                                )
+                            },
+                        ),
+                        since = since,
+                    )
                 }
-                activeRpc.updateRPC(
-                    activity = Activity(
-                        name = customName.ifBlank { appName },
-                        details = title,
-                        state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters),
-                        type = ActivityType.WATCHING.value,
-                        timestamps = Activity.Timestamps(start = since),
-                        assets = largeImage?.let {
-                            Activity.Assets(
-                                largeImage = it,
-                                largeText = title,
-                                smallImage = smallImage,
-                                smallText = smallImage?.let { appName },
-                            )
-                        },
-                    ),
-                    since = since,
-                )
             }
         }
     }
