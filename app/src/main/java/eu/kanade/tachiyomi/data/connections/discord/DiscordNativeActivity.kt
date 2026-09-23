@@ -21,12 +21,10 @@ data class DiscordNativeActivity(
     val button1Url: String? = null,
     val button2Label: String? = null,
     val button2Url: String? = null,
+    // Matches discordpp::ActivityTypes::Watching - the only type Rokku sets today.
+    val activityType: Int = TYPE_WATCHING,
 ) {
     companion object {
-        // Matches discordpp::ActivityTypes::Watching.
         const val TYPE_WATCHING = 3
-
-        val DiscordNativeActivity.activityType: Int
-            get() = TYPE_WATCHING
     }
 }
