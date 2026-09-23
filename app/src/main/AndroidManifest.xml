@@ -29,6 +29,15 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_APP_SPECIFIC_LOCALES" />
 
+    <!-- Discord Social SDK: lets NativeCalls.authorize() find the Discord app (or fall back to
+         a Custom Tab) for the OAuth login screen. -->
+    <queries>
+        <package android:name="com.discord" />
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -303,6 +312,30 @@
                 <data
                     android:host="hikka-auth"
                     android:scheme="rokku" />
+            </intent-filter>
+        </activity>
+
+        <!-- Discord Social SDK OAuth login (triggered from SettingsDiscordAccountsController,
+             not by a deeplink - no intent-filter needed). -->
+        <activity
+            android:name=".ui.setting.connections.DiscordLoginActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Required by the Discord Social SDK: receives the OAuth redirect once the user
+             approves the request in the Discord app/browser. Scheme is discord-<APP_ID>, fixed
+             by Discord's own SDK contract, not ours to rename. -->
+        <activity
+            android:name="com.discord.socialsdk.AuthenticationActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="discord-1547043658719698984" />
             </intent-filter>
         </activity>
 
