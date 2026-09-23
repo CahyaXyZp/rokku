@@ -1,10 +1,12 @@
 package eu.kanade.tachiyomi.ui.setting.controllers
 
+import android.content.Intent
 import android.widget.EditText
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
+import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginActivity
 import eu.kanade.tachiyomi.ui.setting.iconRes
 import eu.kanade.tachiyomi.ui.setting.infoPreference
 import eu.kanade.tachiyomi.ui.setting.onClick
@@ -25,16 +27,28 @@ import android.R as AR
 
 /**
  * Lists the Discord accounts saved for Rich Presence and lets the user add/remove/switch
- * between them. Accounts are added by token only for now - a WebView-based login flow (like
- * the one used for trackers) is a separate follow-up.
+ * between them. Adding an account offers a choice: the official Social SDK login (default), or
+ * a raw account token (advanced - e.g. for accounts the SDK login flow doesn't support).
  */
 class SettingsDiscordAccountsController : SettingsLegacyController() {
 
     private val connectionsManager: ConnectionsManager by injectLazy()
 
+    private var screenRef: PreferenceScreen? = null
+
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
+        screenRef = this
         titleRes = MR.strings.discord_rpc_accounts
         refresh(this)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_SDK_LOGIN) {
+            // DiscordLoginActivity already saved the account (or didn't) before finishing -
+            // just reflect whatever state that left us in, regardless of resultCode.
+            screenRef?.let { refresh(it) }
+        }
     }
 
     private fun refresh(screen: PreferenceScreen) {
@@ -77,12 +91,30 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
                 iconRes = R.drawable.ic_add_24dp
                 titleRes = MR.strings.discord_rpc_add_account
                 isPersistent = false
-                onClick { showAddAccountDialog(screen) }
+                onClick { showAddAccountMethodDialog(screen) }
             }
         }
     }
 
-    private fun showAddAccountDialog(screen: PreferenceScreen) {
+    /**
+     * Lets the user pick how to add an account: the official Social SDK login (default), or a
+     * raw account token (advanced).
+     */
+    private fun showAddAccountMethodDialog(screen: PreferenceScreen) {
+        val act = activity ?: return
+        act.materialAlertDialog()
+            .setTitle(MR.strings.discord_rpc_add_account)
+            .setMessage(MR.strings.discord_rpc_add_account_choose_method)
+            .setPositiveButton(act.getString(MR.strings.discord_rpc_login_via_discord)) { _, _ ->
+                startActivityForResult(Intent(act, DiscordLoginActivity::class.java), REQUEST_SDK_LOGIN)
+            }
+            .setNegativeButton(act.getString(MR.strings.discord_rpc_login_via_token)) { _, _ ->
+                showTokenLoginDialog(screen)
+            }
+            .show()
+    }
+
+    private fun showTokenLoginDialog(screen: PreferenceScreen) {
         val act = activity ?: return
         val editText = EditText(act)
         act.materialAlertDialog()
@@ -110,5 +142,9 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
             }
             .setNegativeButton(AR.string.cancel, null)
             .show()
+    }
+
+    companion object {
+        private const val REQUEST_SDK_LOGIN = 2001
     }
 }
