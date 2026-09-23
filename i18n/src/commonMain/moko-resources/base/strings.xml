@@ -684,6 +684,9 @@
     <string name="discord_rpc_show_app_icon_summary">Display the app logo on your Rich Presence status</string>
     <string name="discord_rpc_accounts">Discord accounts</string>
     <string name="discord_rpc_add_account">Add account</string>
+    <string name="discord_rpc_add_account_choose_method">How would you like to add an account?</string>
+    <string name="discord_rpc_login_via_discord">Log in with Discord</string>
+    <string name="discord_rpc_login_via_token">Log in with token (Advanced)</string>
     <string name="discord_rpc_add_account_dialog_message">Paste your Discord account token below</string>
     <string name="discord_rpc_no_accounts">No accounts added yet</string>
     <string name="discord_rpc_remove_account_confirm">Remove this account?</string>
