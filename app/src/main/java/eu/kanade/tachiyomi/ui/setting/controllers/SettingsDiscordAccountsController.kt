@@ -3,6 +3,10 @@ package eu.kanade.tachiyomi.ui.setting.controllers
 import android.content.Intent
 import android.widget.EditText
 import androidx.preference.PreferenceScreen
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.target
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
@@ -66,6 +70,17 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
                         isIconSpaceReserved = true
                         title = account.username
                         summary = if (account.isActive) context.getString(MR.strings.discord_rpc_active_account) else null
+                        // Fetched profile picture, set once Coil loads it - the preference
+                        // already renders fine without one in the meantime, just with the
+                        // icon space reserved above.
+                        account.avatarUrl?.let { avatarUrl ->
+                            context.imageLoader.enqueue(
+                                ImageRequest.Builder(context)
+                                    .data(avatarUrl)
+                                    .target(onSuccess = { image -> icon = image.asDrawable(context.resources) })
+                                    .build(),
+                            )
+                        }
                         onClick {
                             connectionsManager.discord.setActiveAccount(account.id)
                             refresh(screen)
