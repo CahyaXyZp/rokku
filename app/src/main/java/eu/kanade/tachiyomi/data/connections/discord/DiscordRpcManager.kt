@@ -50,7 +50,12 @@ object DiscordRpcManager {
     private const val TAG = "DiscordRpcManager"
     private val APP_ID = BuildConfig.DISCORD_APP_ID
     private const val SCOPES = "identify openid sdk.social_layer_presence"
-    private val REDIRECT_URI = "discord-$APP_ID:///authorize/callback"
+
+    // Discord's own fixed format for mobile OAuth2 redirects: a single slash after the colon
+    // ("discord-APP_ID:/authorize/callback"), not the "://" authority form. Must be registered
+    // verbatim under OAuth2 > Redirects for this application in the Discord Developer Portal, or
+    // Discord rejects it up front with "Invalid OAuth2 redirect_uri" before the consent screen.
+    private val REDIRECT_URI = "discord-$APP_ID:/authorize/callback"
     private const val AUTH_URL = "https://discord.com/oauth2/authorize"
     private const val TOKEN_URL = "https://discord.com/api/v10/oauth2/token"
     private const val USER_URL = "https://discord.com/api/v10/users/@me"
