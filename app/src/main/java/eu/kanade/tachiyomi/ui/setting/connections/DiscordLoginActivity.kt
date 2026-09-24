@@ -53,6 +53,11 @@ class DiscordLoginActivity : Activity() {
                     username = user.username,
                     avatarUrl = user.avatarUrl,
                     token = accessToken,
+                    // Only one account can be active at a time for now, and there's no other way
+                    // to activate an account anymore - tap/hold on the account list are reserved
+                    // for opening per-account settings and removal - so the newly added account
+                    // always becomes the active one.
+                    isActive = true,
                     authMethod = DiscordAuthMethod.SDK,
                 )
                 connectionsManager.discord.addAccount(account)
