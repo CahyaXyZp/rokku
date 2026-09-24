@@ -2,7 +2,7 @@
 # workflow_dispatch) already builds, signs (see the "Sign APK" step), tags, and publishes the
 # GitHub Release in this same job. A separate workflow triggered by a `v*` tag push would run
 # again when this workflow pushes its own tag, publishing a duplicate release - so don't add one.
-name: Build app
+name: Release Build
 
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build and Release v{0}', github.event.inputs.version) || github.event.commits[0].message }}
 
@@ -46,7 +46,7 @@ permissions:
 
 jobs:
   build:
-    name: Build app
+    name: Build, Sign & Release
     runs-on: ubuntu-latest
 
     steps:
