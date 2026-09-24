@@ -38,8 +38,8 @@ class Discord(id: Long) : ConnectionsService(id) {
 
     /**
      * Validates [token] against the Discord API and returns the associated account profile, or
-     * null if the token is invalid or the request fails. The first account ever added is marked
-     * active by default.
+     * null if the token is invalid or the request fails. Only one account can be active at a
+     * time, so the newly added account always becomes the active one.
      */
     suspend fun fetchProfile(token: String): DiscordAccount? = withContext(Dispatchers.IO) {
         try {
@@ -59,7 +59,7 @@ class Discord(id: Long) : ConnectionsService(id) {
                     username = username,
                     avatarUrl = avatar?.let { "https://cdn.discordapp.com/avatars/$id/$it.png" },
                     token = token,
-                    isActive = getAccounts().isEmpty(),
+                    isActive = true,
                 )
             }
         } catch (e: Exception) {
