@@ -75,12 +75,15 @@ android {
             //noinspection ChromeOsAbiSupport
             abiFilters += supportedAbis
         }
+    }
 
-        externalNativeBuild {
-            cmake {
-                path = file("src/main/cpp/CMakeLists.txt")
-                version = "3.22.1"
-            }
+    // CMake config lives at the android{} level (defaultConfig.externalNativeBuild.cmake only
+    // has arguments/cFlags/cppFlags/targets/version - no "path" property; putting path= here
+    // instead resolved to an unrelated same-named val and failed to compile).
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 
@@ -334,6 +337,3 @@ androidComponents {
         (variantBuilder as? com.android.build.api.variant.HasUnitTestBuilder)?.enableUnitTest = true
     }
 }
-
-
-
