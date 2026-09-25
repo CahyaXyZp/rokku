@@ -8,7 +8,6 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import eu.kanade.tachiyomi.ui.setting.bindTo
-import eu.kanade.tachiyomi.ui.setting.editTextPreference
 import eu.kanade.tachiyomi.ui.setting.iconRes
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preference
@@ -35,6 +34,10 @@ class SettingsConnectionsController : SettingsLegacyController() {
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         titleRes = MR.strings.connections
 
+        // One-time upgrade from when activity name/app-icon were global instead of per-account -
+        // see Discord.migrateLegacyActivitySettingsIfNeeded() for what this actually does.
+        connectionsManager.discord.migrateLegacyActivitySettingsIfNeeded()
+
         preferenceCategory {
             titleRes = MR.strings.connections_discord
 
@@ -52,18 +55,6 @@ class SettingsConnectionsController : SettingsLegacyController() {
                 onClick {
                     router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
                 }
-            }
-
-            editTextPreference(activity) {
-                bindTo(connectionsPreferences.discordCustomActivityName())
-                titleRes = MR.strings.discord_rpc_activity_name
-                dialogSummary = context.getString(MR.strings.discord_rpc_activity_name_summary)
-            }
-
-            switchPreference {
-                bindTo(connectionsPreferences.discordShowAppIcon())
-                titleRes = MR.strings.discord_rpc_show_app_icon
-                summary = context.getString(MR.strings.discord_rpc_show_app_icon_summary)
             }
         }
     }
