@@ -69,6 +69,7 @@ import com.google.android.material.transition.platform.MaterialContainerTransfor
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
+import eu.kanade.tachiyomi.data.connections.discord.DiscordRpcManager
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
@@ -293,6 +294,18 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
         window.sharedElementsUseOverlay = false
 
         super.onCreate(savedInstanceState)
+
+        // Discord Social SDK needs a live Activity to resolve a Context internally (e.g. when
+        // NativeCalls.authorize() checks for the local Discord app) - without this,
+        // DiscordSocialSdkInit.getEngineActivity() returns null and the SDK NPEs on connect.
+        // Wrapped defensively since this runs on every app start, SDK-login users or not.
+        try {
+            com.discord.socialsdk.DiscordSocialSdkInit.setEngineActivity(this)
+        } catch (_: Exception) {
+        }
+        if (!DiscordRpcManager.isInitialized()) {
+            DiscordRpcManager.init()
+        }
 
         backPressedCallback = object : OnBackPressedCallback(enabled = true) {
             var startTime: Long = 0

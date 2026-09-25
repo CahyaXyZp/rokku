@@ -94,6 +94,12 @@ object Notifications {
     const val CHANNEL_INCOGNITO_MODE = "incognito_mode_channel"
     const val ID_INCOGNITO_MODE = -701
 
+    /**
+     * Notification channel used for the Discord Rich Presence foreground service.
+     */
+    const val CHANNEL_DISCORD_RPC = "discord_rpc_channel"
+    const val ID_DISCORD_RPC = -801
+
     private val deprecatedChannels = listOf(
         "backup_restore_channel",
         "library_channel",
@@ -201,6 +207,14 @@ object Notifications {
                 context.getString(MR.strings.incognito_mode),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
+            },
+            NotificationChannel(
+                CHANNEL_DISCORD_RPC,
+                context.getString(MR.strings.connections_discord),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_SECRET
             },
             NotificationChannel(

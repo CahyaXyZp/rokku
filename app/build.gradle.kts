@@ -67,11 +67,23 @@ android {
         buildConfigField("Boolean", "INCLUDE_UPDATER", "false")
         buildConfigField("Boolean", "BETA", "false")
         buildConfigField("Boolean", "NIGHTLY", "false")
+        // Discord Social SDK application ID, used by DiscordRpcManager for OAuth + Rich Presence.
+        buildConfigField("long", "DISCORD_APP_ID", "1547043658719698984L")
 
         ndk {
             // False positive, we have x86 abi support
             //noinspection ChromeOsAbiSupport
             abiFilters += supportedAbis
+        }
+    }
+
+    // CMake config lives at the android{} level (defaultConfig.externalNativeBuild.cmake only
+    // has arguments/cFlags/cppFlags/targets/version - no "path" property; putting path= here
+    // instead resolved to an unrelated same-named val and failed to compile).
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 
@@ -124,6 +136,10 @@ android {
         aidl = true
         renderScript = false
         shaders = false
+
+        // Exposes the Discord Social SDK's CMake config package (bundled in the AAR) to our
+        // native bridge's find_package(discord_partner_sdk).
+        prefab = true
     }
 
     flavorDimensions.add("default")
@@ -259,6 +275,10 @@ dependencies {
 
     implementation(kotlinx.immutable)
 
+    // Discord Social SDK - official AAR, used by DiscordRpcManager/discord_bridge for OAuth
+    // login and native Rich Presence, alongside the existing Token Login gateway flow.
+    implementation(files("libs/discord_partner_sdk.aar"))
+
     // Tests
     testImplementation(libs.bundles.test)
     testRuntimeOnly(libs.bundles.test.runtime)
@@ -317,7 +337,3 @@ androidComponents {
         (variantBuilder as? com.android.build.api.variant.HasUnitTestBuilder)?.enableUnitTest = true
     }
 }
-
-
-
-

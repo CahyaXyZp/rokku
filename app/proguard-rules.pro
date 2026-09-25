@@ -115,3 +115,16 @@
 # Firebase
 -keep class com.google.firebase.installations.** { *; }
 -keep interface com.google.firebase.installations.** { *; }
+
+# Discord Social SDK - discord_bridge.cpp finds DiscordRpcManager and its
+# onNativeStatusChanged method by name/signature via JNI reflection (FindClass/
+# GetStaticMethodID), which R8 can't trace as a usage - keep them explicitly or
+# shrinking can strip the callback and silently break status updates.
+-keep class eu.kanade.tachiyomi.data.connections.discord.DiscordRpcManager {
+    *;
+}
+-keepclassmembers class eu.kanade.tachiyomi.data.connections.discord.DiscordRpcManager {
+    static <methods>;
+}
+-keep class eu.kanade.tachiyomi.data.connections.discord.DiscordNativeActivity { *; }
+-keep class eu.kanade.tachiyomi.data.connections.discord.DiscordUser { *; }

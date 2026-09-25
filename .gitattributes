@@ -22,3 +22,9 @@
 *.woff binary
 *.pyc binary
 *.swp binary
+
+# Discord Social SDK - without this, git's own binary detection can miss the AAR and
+# CRLF-normalize it on commit, corrupting the archive (this is why the earlier commit warned
+# "CRLF will be replaced by LF" for discord_partner_sdk.aar).
+*.aar binary
+*.so binary

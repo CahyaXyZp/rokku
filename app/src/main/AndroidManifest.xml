@@ -29,6 +29,18 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_APP_SPECIFIC_LOCALES" />
 
+    <!-- Discord Social SDK: lets NativeCalls.authorize() find the Discord app (or fall back to
+         a Custom Tab) for the OAuth login screen, and check for its RPC service. -->
+    <queries>
+        <package android:name="com.discord" />
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="com.discord.socialsdk.rpc.IDiscordRpcService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -306,6 +318,35 @@
             </intent-filter>
         </activity>
 
+        <!-- Discord Social SDK OAuth login (triggered from SettingsDiscordAccountsController,
+             not by a deeplink - no intent-filter needed). configChanges avoids the activity
+             (and the in-flight authorize() callback closure tied to it) being torn down and
+             recreated by a rotation mid-flow. -->
+        <activity
+            android:name=".ui.setting.connections.DiscordLoginActivity"
+            android:exported="false"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Required by the Discord Social SDK: receives the OAuth redirect once the user
+             approves the request in the Discord app/browser. Scheme is discord-<APP_ID>, fixed
+             by Discord's own SDK contract, not ours to rename. singleTask keeps the redirect
+             from spawning a duplicate instance on top of an already-running one. -->
+        <activity
+            android:name="com.discord.socialsdk.AuthenticationActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="discord-1547043658719698984" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".extension.util.ExtensionInstallActivity"
             android:icon="@mipmap/ic_launcher"
@@ -357,6 +398,12 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/updates_grid_glance_widget_info" />
         </receiver>
+
+        <service
+            android:name=".data.connections.discord.DiscordRPCService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
