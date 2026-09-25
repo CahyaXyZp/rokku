@@ -18,7 +18,6 @@ import eu.kanade.tachiyomi.ui.setting.onLongClick
 import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
 import eu.kanade.tachiyomi.ui.setting.preferenceLongClickable
-import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.materialAlertDialog
 import eu.kanade.tachiyomi.util.system.toast
@@ -28,6 +27,7 @@ import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
 import yokai.util.lang.getString
 import android.R as AR
+import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 
 /**
  * Lists the Discord accounts saved for Rich Presence and lets the user add/remove/switch
