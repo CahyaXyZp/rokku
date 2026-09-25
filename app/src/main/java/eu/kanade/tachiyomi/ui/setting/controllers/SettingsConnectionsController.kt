@@ -14,12 +14,12 @@ import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
 import eu.kanade.tachiyomi.ui.setting.switchPreference
-import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
 import yokai.util.lang.getString
+import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 
 /**
  * Settings > Connections. Currently only holds Discord Rich Presence, but is named generically
