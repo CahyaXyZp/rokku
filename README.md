@@ -33,6 +33,8 @@ This fork was created for personal use, after Yokai fell behind on the current K
 
 Updates are sporadic, sometimes fast, sometimes slow.
 
+**This fork is primarily maintained for personal use. Bugs and issues may not be fixed, especially if they do not affect my use case. Critical bugs affecting this fork may still be addressed.**
+
 The name is a play on the developer's surname (Rocha, "rock" in Portuguese): 岩 (*iwa*), the kanji used as the project's symbol, is the traditional Japanese word for rock — used for natural rock formations, mountains, rock climbing, and geology. "Rokku" (ロック) is the same word in its more modern/loanword sense, closer to pop culture and "rock" as in rock 'n' roll.
 
 ## Features
