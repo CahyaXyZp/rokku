@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.util.system.materialAlertDialog
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.view.setMessage
 import eu.kanade.tachiyomi.util.view.setTitle
+import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
 import yokai.util.lang.getString
@@ -81,9 +82,11 @@ class SettingsDiscordAccountsController : SettingsLegacyController() {
                                     .build(),
                             )
                         }
+                        // Tap opens this account's Rich Presence settings (activity name, app
+                        // icon badge) - there's no "set active" control anymore, accounts go
+                        // active automatically as soon as they're added.
                         onClick {
-                            connectionsManager.discord.setActiveAccount(account.id)
-                            refresh(screen)
+                            router.pushController(SettingsDiscordAccountController(account.id).withFadeTransaction())
                         }
                         onLongClick {
                             activity?.let { act ->
