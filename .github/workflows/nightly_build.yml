@@ -114,12 +114,41 @@ jobs:
           mv "$dir"/app-standard-x86-*-signed.apk          rokku-x86-${{ env.VERSION_TAG }}.apk
           mv "$dir"/app-standard-x86_64-*-signed.apk       rokku-x86_64-${{ env.VERSION_TAG }}.apk
 
-      # Nightlies build on every push to master, so a long retention would pile up storage for
-      # builds nobody's likely to grab once the next one lands - 14 days comfortably covers
-      # "I want to try what's on master this week" without keeping every nightly forever.
-      - name: Upload signed APKs
+      # One artifact per variant (not one artifact bundling all five) so downloading, say, just
+      # arm64-v8a doesn't also pull down every other ABI's APK in the same zip.
+      # 14-day retention: nightlies build on every push to master, so a longer retention would
+      # pile up storage for builds nobody's likely to grab once the next one lands.
+      - name: Upload universal APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: rokku-nightly-${{ env.VERSION_TAG }}
-          path: rokku-*.apk
+          name: rokku-nightly-universal-${{ env.VERSION_TAG }}
+          path: rokku-${{ env.VERSION_TAG }}.apk
+          retention-days: 14
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rokku-nightly-arm64-v8a-${{ env.VERSION_TAG }}
+          path: rokku-arm64-v8a-${{ env.VERSION_TAG }}.apk
+          retention-days: 14
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rokku-nightly-armeabi-v7a-${{ env.VERSION_TAG }}
+          path: rokku-armeabi-v7a-${{ env.VERSION_TAG }}.apk
+          retention-days: 14
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rokku-nightly-x86-${{ env.VERSION_TAG }}
+          path: rokku-x86-${{ env.VERSION_TAG }}.apk
+          retention-days: 14
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rokku-nightly-x86_64-${{ env.VERSION_TAG }}
+          path: rokku-x86_64-${{ env.VERSION_TAG }}.apk
           retention-days: 14
