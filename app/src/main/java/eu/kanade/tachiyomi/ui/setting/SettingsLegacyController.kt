@@ -35,8 +35,13 @@ import yokai.i18n.MR
 import yokai.util.lang.getString
 import java.util.*
 
-abstract class SettingsLegacyController :
-    PreferenceController(),
+/**
+ * [bundle] lets subclasses retain constructor arguments across process death/restoration - same
+ * pattern as [eu.kanade.tachiyomi.ui.base.controller.BaseLegacyController]. Defaults to null so
+ * every existing no-arg settings screen is unaffected.
+ */
+abstract class SettingsLegacyController(bundle: Bundle? = null) :
+    PreferenceController(bundle),
     SettingsControllerInterface,
     BackHandlerControllerInterface,
     BaseControllerPreferenceControllerCommonInterface {
