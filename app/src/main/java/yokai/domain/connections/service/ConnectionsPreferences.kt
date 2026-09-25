@@ -28,6 +28,13 @@ class ConnectionsPreferences(
 
     fun discordAccounts() = preferenceStore.getString(Preference.privateKey("discord_accounts"), "")
 
+    // True once Discord.migrateLegacyActivitySettingsIfNeeded() has copied the two legacy prefs
+    // below onto every saved account, so it only ever runs once.
+    fun discordAccountSettingsMigrated() = preferenceStore.getBoolean("pref_discord_account_settings_migrated", false)
+
+    // Legacy: activity name/app-icon used to be global instead of per-account. Kept only so
+    // migrateLegacyActivitySettingsIfNeeded() has something to read; nothing writes to these
+    // anymore.
     fun discordCustomActivityName() = preferenceStore.getString("pref_discord_custom_activity_name", "")
 
     fun discordShowAppIcon() = preferenceStore.getBoolean("pref_discord_show_app_icon", true)
