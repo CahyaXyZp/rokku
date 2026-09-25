@@ -66,6 +66,7 @@ class DiscordRPCService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_RESTART -> restartRPC()
+
             ACTION_STOP -> {
                 Logger.i { "Stopping Discord RPC service" }
                 stopSelf()
@@ -98,6 +99,7 @@ class DiscordRPCService : Service() {
                 }
                 DiscordRpcManager.reconnectWithToken(token)
             }
+
             DiscordAuthMethod.TOKEN -> {
                 usingSdk = false
                 rpc = DiscordRPC(token)
