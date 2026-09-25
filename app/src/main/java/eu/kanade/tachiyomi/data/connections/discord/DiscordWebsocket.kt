@@ -145,16 +145,21 @@ open class DiscordWebSocketImpl(
                     heartbeatInterval = map.d.jsonObject["heartbeat_interval"]!!.jsonPrimitive.long
                     sendHeartBeat(true)
                 }
+
                 OpCode.DISPATCH.value -> if (map.t == "READY") {
                     connected = true
                     connectionState.value = true
                 }
+
                 OpCode.HEARTBEAT.value -> {
                     if (scope.isActive) scope.cancel()
                     webSocket.send("{\"op\":${OpCode.HEARTBEAT.value}, \"d\":$seq}")
                 }
+
                 OpCode.HEARTBEAT_ACK.value -> sendHeartBeat(false)
+
                 OpCode.RECONNECT.value -> webSocket.close(RECONNECT_CLOSE_CODE, "Reconnect")
+
                 OpCode.INVALID_SESSION.value -> sendHeartBeat(true)
             }
         }
