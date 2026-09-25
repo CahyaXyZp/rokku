@@ -1,0 +1,124 @@
+# Builds the nightly variant on every push to master and uploads the signed APKs as plain
+# Actions artifacts - no GitHub Release, no external repo, no website notification. Stable/beta
+# releases are a separate, manually-triggered workflow (release_build.yml).
+name: Nightly Build
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**'
+      - '!**.md'
+      - '!.github/ISSUE_TEMPLATE/**'
+      - '!i18n/src/commonMain/moko-resources/**/strings.xml'
+      - '!i18n/src/commonMain/moko-resources/**/plurals.xml'
+      - 'i18n/src/commonMain/moko-resources/base/strings.xml'
+      - 'i18n/src/commonMain/moko-resources/base/plurals.xml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build:
+    name: Build, Sign & Upload
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Android SDK
+        run: |
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: null2264/actions/gradle-java-setup@363cb9cf3d66bd9c72ed6860142c6b2c121d7e94
+        with:
+          java: 21
+          distro: temurin
+
+      - name: Copy CI gradle.properties
+        run: |
+          mkdir -p ~/.gradle
+          cp .github/runner-files/ci-gradle.properties ~/.gradle/gradle.properties
+
+      - name: Set nightly version
+        run: echo "VERSION_TAG=r$(git rev-list --count HEAD)" >> $GITHUB_ENV
+
+      - name: Build the app
+        run: ./gradlew assembleStandardNightly
+
+      - name: Run unit tests
+        run: ./gradlew testStandardNightlyUnitTest
+
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6
+        if: success() || failure()
+        with:
+          include_passed: true
+          detailed_summary: true
+          report_paths: '**/build/test-results/test*/TEST-*.xml'
+
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: mapping-${{ github.sha }}
+          path: app/build/outputs/mapping/standardNightly
+          retention-days: 14
+
+      - name: Sign APK
+        uses: null2264/actions/android-signer@363cb9cf3d66bd9c72ed6860142c6b2c121d7e94
+        with:
+          releaseDir: app/build/outputs/apk/standard/nightly
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          keyAlias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          summarise: true
+
+      # Rely on the platform's own verifier rather than re-deriving APK signature validity
+      # ourselves, and fail the job (rather than silently uploading) if any signed APK doesn't
+      # verify, or if none were produced at all.
+      - name: Verify APK signatures
+        run: |
+          set -e
+          dir="app/build/outputs/apk/standard/nightly"
+          count=0
+          for apk in "$dir"/*-signed.apk; do
+            echo "Verifying $apk"
+            "${ANDROID_SDK_ROOT}/build-tools/35.0.0/apksigner" verify "$apk"
+            count=$((count+1))
+          done
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No signed APKs found in $dir" >&2
+            exit 1
+          fi
+          echo "Verified $count signed APK(s)"
+
+      - name: Rename signed APKs
+        run: |
+          set -e
+          dir="app/build/outputs/apk/standard/nightly"
+          mv "$dir"/app-standard-universal-*-signed.apk    rokku-${{ env.VERSION_TAG }}.apk
+          mv "$dir"/app-standard-arm64-v8a-*-signed.apk    rokku-arm64-v8a-${{ env.VERSION_TAG }}.apk
+          mv "$dir"/app-standard-armeabi-v7a-*-signed.apk  rokku-armeabi-v7a-${{ env.VERSION_TAG }}.apk
+          mv "$dir"/app-standard-x86-*-signed.apk          rokku-x86-${{ env.VERSION_TAG }}.apk
+          mv "$dir"/app-standard-x86_64-*-signed.apk       rokku-x86_64-${{ env.VERSION_TAG }}.apk
+
+      # Nightlies build on every push to master, so a long retention would pile up storage for
+      # builds nobody's likely to grab once the next one lands - 14 days comfortably covers
+      # "I want to try what's on master this week" without keeping every nightly forever.
+      - name: Upload signed APKs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rokku-nightly-${{ env.VERSION_TAG }}
+          path: rokku-*.apk
+          retention-days: 14

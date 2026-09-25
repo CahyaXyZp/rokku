@@ -7,8 +7,11 @@ on:
   release:
     types: [published]
 
+permissions: {}
+
 jobs:
   dispatch:
+    name: Notify website
     runs-on: ubuntu-latest
     steps:
       - name: Determine stage
