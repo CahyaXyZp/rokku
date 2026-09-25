@@ -204,9 +204,9 @@ class DiscordRPCService : Service() {
          * Updates the Rich Presence: Activity "Watching", Details [title],
          * State "Chapter [currentChapter] of [totalChapters]", Timestamp elapsed since the
          * service started. The large image is the manga's own cover ([coverUrl]); the app
-         * icon is only ever attached as a small badge on top of it, and only when "Show app
-         * icon" is enabled. No-ops while [sourceId] is under Incognito Mode (global or
-         * per-extension).
+         * icon is only ever attached as a small badge on top of it, and only when the active
+         * account's "Show app icon" setting is enabled. No-ops while [sourceId] is under
+         * Incognito Mode (global or per-extension), or if there's no active account.
          */
         fun setReadingActivity(
             context: Context,
@@ -215,17 +215,17 @@ class DiscordRPCService : Service() {
             totalChapters: Int,
             coverUrl: String?,
             sourceId: Long? = null,
-            connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+            connectionsManager: ConnectionsManager = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
             extensionManager: ExtensionManager = Injekt.get(),
         ) {
             if (!isConnected()) return
             if (isIncognitoModeForSource(sourceId, preferences, extensionManager)) return
             launchIO {
+                val account = connectionsManager.discord.getAccounts().find { it.isActive } ?: return@launchIO
                 val appName = context.getString(MR.strings.app_name)
-                val customName = connectionsPreferences.discordCustomActivityName().get()
-                val showAppIcon = connectionsPreferences.discordShowAppIcon().get()
-                val name = customName.ifBlank { appName }
+                val showAppIcon = account.showAppIcon
+                val name = account.customActivityName.ifBlank { appName }
                 val state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters)
 
                 if (usingSdk) {
