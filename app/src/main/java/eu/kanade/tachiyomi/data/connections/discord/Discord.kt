@@ -116,14 +116,42 @@ class Discord(id: Long) : ConnectionsService(id) {
         }
     }
 
-    fun setActiveAccount(accountId: String) {
+    /**
+     * Updates [accountId]'s Rich Presence activity name/app-icon badge. Restarts RPC only when
+     * the edited account is the active one - editing an inactive account's settings shouldn't
+     * interrupt whatever's currently running.
+     */
+    fun updateAccountSettings(accountId: String, customActivityName: String, showAppIcon: Boolean) {
         val accounts = getAccounts().toMutableList()
-        accounts.replaceAll { it.copy(isActive = it.id == accountId) }
+        val index = accounts.indexOfFirst { it.id == accountId }
+        if (index < 0) return
+
+        val updated = accounts[index].copy(customActivityName = customActivityName, showAppIcon = showAppIcon)
+        accounts[index] = updated
         saveAccounts(accounts)
-        accounts.find { it.id == accountId }?.let { account ->
-            connectionsPreferences.connectionsToken(this).set(account.token)
-            restartRichPresence()
+
+        if (updated.isActive) restartRichPresence()
+    }
+
+    /**
+     * One-time upgrade path from when the activity name/app-icon settings were global instead
+     * of per-account: copies the old global values onto every saved account so nobody's existing
+     * setup silently changes, then marks itself done so a per-account change made afterwards is
+     * never overwritten.
+     */
+    fun migrateLegacyActivitySettingsIfNeeded() {
+        if (connectionsPreferences.discordAccountSettingsMigrated().get()) return
+
+        val legacyName = connectionsPreferences.discordCustomActivityName().get()
+        val legacyShowAppIcon = connectionsPreferences.discordShowAppIcon().get()
+        val accounts = getAccounts()
+        if (accounts.isNotEmpty()) {
+            saveAccounts(
+                accounts.map { it.copy(customActivityName = legacyName, showAppIcon = legacyShowAppIcon) },
+            )
         }
+
+        connectionsPreferences.discordAccountSettingsMigrated().set(true)
     }
 
     /**
