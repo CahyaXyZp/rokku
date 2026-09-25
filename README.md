@@ -29,8 +29,7 @@ A free and open source manga reader
 
 Rokku is a fork of [Yokai](https://github.com/null2264/yokai), which is itself a fork of [TachiyomiJ2K](https://github.com/Jays2Kings/tachiyomiJ2K) and [Mihon](https://github.com/mihonapp/mihon) (formerly Tachiyomi).
 
-> [!CAUTION]
-> **This fork is maintained for personal use. Bugs and issues will not be fixed unless they are critical to this fork.**
+**This fork is maintained for personal use. Bugs and issues will not be fixed unless they are critical to this fork.**
 
 ## Features
 
