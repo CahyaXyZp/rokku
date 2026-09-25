@@ -39,6 +39,11 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         var showAppIcon = account.showAppIcon
 
         val nameInput = EditTextPreference(context).apply {
+            // Not persisted to SharedPreferences (isPersistent = false below), but the dialog
+            // framework still looks the preference up by key when the edit dialog is opened
+            // (PreferenceManager.showDialog -> findPreference) - without one it throws
+            // "Key cannot be null" as soon as this preference is tapped.
+            key = KEY_ACTIVITY_NAME
             title = context.getString(MR.strings.discord_rpc_activity_name)
             dialogTitle = title
             dialogMessage = context.getString(MR.strings.discord_rpc_activity_name_summary)
@@ -56,6 +61,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         addPreference(nameInput)
 
         val showIconSwitch = SwitchPreferenceCompat(context).apply {
+            key = KEY_SHOW_APP_ICON
             title = context.getString(MR.strings.discord_rpc_show_app_icon)
             summary = context.getString(MR.strings.discord_rpc_show_app_icon_summary)
             isIconSpaceReserved = false
@@ -72,5 +78,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
     companion object {
         private const val ACCOUNT_ID = "account_id"
+        private const val KEY_ACTIVITY_NAME = "discord_account_activity_name"
+        private const val KEY_SHOW_APP_ICON = "discord_account_show_app_icon"
     }
 }
