@@ -33,7 +33,7 @@ This fork was created for personal use, after Yokai fell behind on the current K
 
 Updates are sporadic, sometimes fast, sometimes slow.
 
-**This fork is primarily maintained for personal use. Bugs and issues may not be fixed, especially if they do not affect my use case. Critical bugs affecting this fork may still be addressed.**
+**This fork is maintained for personal use. Bugs and issues will not be fixed unless they are critical to this fork.**
 
 The name is a play on the developer's surname (Rocha, "rock" in Portuguese): 岩 (*iwa*), the kanji used as the project's symbol, is the traditional Japanese word for rock — used for natural rock formations, mountains, rock climbing, and geology. "Rokku" (ロック) is the same word in its more modern/loanword sense, closer to pop culture and "rock" as in rock 'n' roll.
 
@@ -106,7 +106,7 @@ The name is a play on the developer's surname (Rocha, "rock" in Portuguese): 岩
 * Dynamic Shortcuts: open the latest chapter of what you were last reading right from your homescreen.
 * [New material snackbar](.github/readme-images/material%20snackbar.png): Removing manga now auto deletes chapters and has an undo button in case you change your mind.
 * Batch Auto-Source Migration (taken from [TachiyomiEH](https://github.com/NerdNumber9/TachiyomiEH)).
-* [Share sheets upgrade for Android 10](.github/readme-images/share%20menu.png)
+* [Share sheets upgrade for Android 10](.github/readme-images/share menu.png)
 * View all chapters right in the reader.
 * A lot more Material Design You additions.
 * Android 12 features such as automatic extension and app updates.
