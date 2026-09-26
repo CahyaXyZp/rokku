@@ -162,7 +162,6 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             key = KEY_ONLINE_STATUS
             title = context.getString(MR.strings.discord_rpc_online_status)
             dialogTitle = title
-            summaryProvider = null
             isIconSpaceReserved = false
             isPersistent = false
             entries = onlineStatusOptions.map { it.second }.toTypedArray()
