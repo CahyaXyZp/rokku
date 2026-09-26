@@ -687,6 +687,8 @@
     <string name="discord_rpc_activity_name_summary">Shown right after \"Watching\". Leave blank to use the app name</string>
     <string name="discord_rpc_show_app_icon">Show app icon</string>
     <string name="discord_rpc_show_app_icon_summary">Display the app logo on your Rich Presence status</string>
+    <string name="discord_rpc_respect_incognito">Respect Incognito Mode</string>
+    <string name="discord_rpc_respect_incognito_summary">Don\'t show Rich Presence while reading a series or source under Incognito Mode</string>
     <string name="discord_rpc_accounts">Discord accounts</string>
     <string name="discord_rpc_add_account">Add account</string>
     <string name="discord_rpc_add_account_choose_method">How would you like to add an account?</string>
