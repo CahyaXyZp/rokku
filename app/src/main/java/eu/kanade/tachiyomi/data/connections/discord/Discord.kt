@@ -117,25 +117,18 @@ class Discord(id: Long) : ConnectionsService(id) {
     }
 
     /**
-     * Updates [accountId]'s Rich Presence activity name/app-icon badge/incognito behavior.
-     * Restarts RPC only when the edited account is the active one - editing an inactive
-     * account's settings shouldn't interrupt whatever's currently running.
+     * Applies [transform] to [accountId]'s saved settings and persists the result. Restarts RPC
+     * only when the edited account is the active one - editing an inactive account's settings
+     * shouldn't interrupt whatever's currently running. Used by every per-account settings
+     * screen (activity name/app-icon/incognito, activity type/state template/status/buttons)
+     * so each one only has to describe the fields it actually owns.
      */
-    fun updateAccountSettings(
-        accountId: String,
-        customActivityName: String,
-        showAppIcon: Boolean,
-        respectIncognito: Boolean,
-    ) {
+    fun updateAccount(accountId: String, transform: (DiscordAccount) -> DiscordAccount) {
         val accounts = getAccounts().toMutableList()
         val index = accounts.indexOfFirst { it.id == accountId }
         if (index < 0) return
 
-        val updated = accounts[index].copy(
-            customActivityName = customActivityName,
-            showAppIcon = showAppIcon,
-            respectIncognito = respectIncognito,
-        )
+        val updated = transform(accounts[index])
         accounts[index] = updated
         saveAccounts(accounts)
 
