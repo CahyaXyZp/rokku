@@ -43,13 +43,14 @@ class DiscordRPC(private val token: String) {
      * Sets the activity for the Rich Presence.
      * @param activity the activity to set.
      * @param since the activity start time.
+     * @param status one of [DiscordOnlineStatus]'s constants.
      */
-    suspend fun updateRPC(activity: Activity, since: Long? = null) {
+    suspend fun updateRPC(activity: Activity, since: Long? = null, status: String = DiscordOnlineStatus.ONLINE) {
         val presence = Presence(
             activities = listOf(activity),
             afk = false,
             since = since,
-            status = "online",
+            status = status,
         )
         discordWebSocket.sendActivity(presence)
     }
