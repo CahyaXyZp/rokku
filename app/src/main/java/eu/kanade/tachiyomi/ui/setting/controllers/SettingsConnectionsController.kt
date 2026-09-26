@@ -56,6 +56,12 @@ class SettingsConnectionsController : SettingsLegacyController() {
                     router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
                 }
             }
+
+            switchPreference {
+                bindTo(connectionsPreferences.discordRespectIncognito())
+                titleRes = MR.strings.discord_rpc_respect_incognito
+                summary = context.getString(MR.strings.discord_rpc_respect_incognito_summary)
+            }
         }
     }
 
