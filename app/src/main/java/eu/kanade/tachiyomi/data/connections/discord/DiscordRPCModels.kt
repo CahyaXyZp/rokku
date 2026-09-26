@@ -25,6 +25,7 @@ data class Activity(
     val type: Int? = null,
     val timestamps: Timestamps? = null,
     val assets: Assets? = null,
+    val buttons: List<Button>? = null,
 ) {
     @Serializable
     data class Assets(
@@ -42,6 +43,16 @@ data class Activity(
     data class Timestamps(
         val start: Long? = null,
         val end: Long? = null,
+    )
+
+    /**
+     * A clickable button on the Rich Presence card. Discord allows at most 2 per activity -
+     * DiscordRPCService.setReadingActivity() enforces that, not this model.
+     */
+    @Serializable
+    data class Button(
+        val label: String,
+        val url: String,
     )
 }
 
