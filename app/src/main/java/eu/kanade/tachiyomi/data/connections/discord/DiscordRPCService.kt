@@ -31,9 +31,9 @@ import yokai.util.lang.getString
 /**
  * Foreground service that keeps Discord Rich Presence updated while the user is reading.
  * Entirely optional: [start] no-ops unless the user has enabled it in settings, has an active
- * account, and (when "Respect Incognito Mode" is on) isn't reading a source under Incognito
- * Mode (global or per-extension) - and stopping it (or disabling the setting) never affects
- * normal app operation.
+ * account, and (when that account's "Respect Incognito Mode" is on) isn't reading a source
+ * under Incognito Mode (global or per-extension) - and stopping it (or disabling the setting)
+ * never affects normal app operation.
  *
  * Backs onto whichever connection the active account's [DiscordAuthMethod] calls for:
  * [DiscordRPC] (a Discord Gateway connection over the account's token) for Token Login accounts,
@@ -158,12 +158,12 @@ class DiscordRPCService : Service() {
         private fun isConnected() = rpc != null || usingSdk
 
         private fun respectsIncognito(
+            account: DiscordAccount,
             sourceId: Long?,
-            connectionsPreferences: ConnectionsPreferences,
             preferences: PreferencesHelper,
             extensionManager: ExtensionManager,
         ): Boolean {
-            if (!connectionsPreferences.discordRespectIncognito().get()) return false
+            if (!account.respectIncognito) return false
             return isIncognitoModeForSource(sourceId, preferences, extensionManager)
         }
 
@@ -176,7 +176,6 @@ class DiscordRPCService : Service() {
             extensionManager: ExtensionManager = Injekt.get(),
         ) {
             if (!connectionsPreferences.enableDiscordRPC().get()) return
-            if (respectsIncognito(sourceId, connectionsPreferences, preferences, extensionManager)) return
 
             val account = connectionsManager.discord.getAccounts().find { it.isActive }
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
@@ -185,6 +184,7 @@ class DiscordRPCService : Service() {
                 connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
+            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
 
             // Always restarts the elapsed-time counter - this used to sit inside the
             // `!isConnected()` check below, but scheduleStop()/resumeReading() can now leave
@@ -255,13 +255,13 @@ class DiscordRPCService : Service() {
         ) {
             val account = connectionsManager.discord.getAccounts().find { it.isActive }
             val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            val blocked = !connectionsPreferences.enableDiscordRPC().get() ||
-                respectsIncognito(sourceId, connectionsPreferences, preferences, extensionManager) ||
+            val missingAccount = !connectionsPreferences.enableDiscordRPC().get() ||
                 account == null || token.isBlank()
-            if (blocked) {
+            if (missingAccount) {
                 if (account == null || token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
                 return
             }
+            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
 
             try {
                 context.startForegroundService(
@@ -278,8 +278,8 @@ class DiscordRPCService : Service() {
          * service started. The large image is the manga's own cover ([coverUrl]); the app
          * icon is only ever attached as a small badge on top of it, and only when the active
          * account's "Show app icon" setting is enabled. No-ops while [sourceId] is under
-         * Incognito Mode (global or per-extension) and "Respect Incognito Mode" is on, or if
-         * there's no active account.
+         * Incognito Mode (global or per-extension) and the active account's "Respect Incognito
+         * Mode" is on, or if there's no active account.
          */
         fun setReadingActivity(
             context: Context,
@@ -289,14 +289,13 @@ class DiscordRPCService : Service() {
             coverUrl: String?,
             sourceId: Long? = null,
             connectionsManager: ConnectionsManager = Injekt.get(),
-            connectionsPreferences: ConnectionsPreferences = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
             extensionManager: ExtensionManager = Injekt.get(),
         ) {
             if (!isConnected()) return
-            if (respectsIncognito(sourceId, connectionsPreferences, preferences, extensionManager)) return
+            val account = connectionsManager.discord.getAccounts().find { it.isActive } ?: return
+            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
             launchIO {
-                val account = connectionsManager.discord.getAccounts().find { it.isActive } ?: return@launchIO
                 val appName = context.getString(MR.strings.app_name)
                 val showAppIcon = account.showAppIcon
                 val name = account.customActivityName.ifBlank { appName }
