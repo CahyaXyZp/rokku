@@ -2,20 +2,23 @@ package eu.kanade.tachiyomi.ui.setting.controllers
 
 import android.os.Bundle
 import androidx.preference.EditTextPreference
+import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
+import eu.kanade.tachiyomi.data.connections.discord.ActivityType
+import eu.kanade.tachiyomi.data.connections.discord.DiscordOnlineStatus
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Rich Presence settings for a single Discord account: custom activity name, whether to show
- * the app icon badge, and whether Incognito Mode should suppress Rich Presence for this account.
- * Pushed from [SettingsDiscordAccountsController] when tapping an account - holding an account
- * there removes it instead, no activation control here since accounts go active automatically
- * as soon as they're added.
+ * Rich Presence settings for a single Discord account - activity name/type/state template, app
+ * icon badge, online status, up to two buttons, and whether Incognito Mode should suppress Rich
+ * Presence for this account. Pushed from [SettingsDiscordAccountsController] when tapping an
+ * account - holding an account there removes it instead, no activation control here since
+ * accounts go active automatically as soon as they're added.
  */
 class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyController(bundle) {
 
@@ -28,6 +31,23 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
     private val accountId: String
         get() = args.getString(ACCOUNT_ID).orEmpty()
 
+    // Discord's own fixed vocabulary for these (shown on Discord itself, not app UI copy), so
+    // kept as plain literals here rather than translated strings - same treatment as button
+    // defaults like "Read Chapter" a few lines below.
+    private val activityTypeOptions = listOf(
+        ActivityType.PLAYING to "Playing",
+        ActivityType.STREAMING to "Streaming",
+        ActivityType.LISTENING to "Listening",
+        ActivityType.WATCHING to "Watching",
+        ActivityType.COMPETING to "Competing",
+    )
+
+    private val onlineStatusOptions = listOf(
+        DiscordOnlineStatus.ONLINE to "Online",
+        DiscordOnlineStatus.IDLE to "Idle",
+        DiscordOnlineStatus.DND to "Do Not Disturb",
+    )
+
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         val account = connectionsManager.discord.getAccounts().find { it.id == accountId }
         title = account?.username
@@ -39,14 +59,29 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         var customActivityName = account.customActivityName
         var showAppIcon = account.showAppIcon
         var respectIncognito = account.respectIncognito
+        var activityType = account.activityType
+        var activityStateTemplate = account.activityStateTemplate
+        var onlineStatus = account.onlineStatus
+        var button1Label = account.button1Label
+        var button1Url = account.button1Url
+        var button2Label = account.button2Label
+        var button2Url = account.button2Url
 
         fun persist() {
-            connectionsManager.discord.updateAccountSettings(
-                accountId,
-                customActivityName,
-                showAppIcon,
-                respectIncognito,
-            )
+            connectionsManager.discord.updateAccount(accountId) {
+                it.copy(
+                    customActivityName = customActivityName,
+                    showAppIcon = showAppIcon,
+                    respectIncognito = respectIncognito,
+                    activityType = activityType,
+                    activityStateTemplate = activityStateTemplate,
+                    onlineStatus = onlineStatus,
+                    button1Label = button1Label,
+                    button1Url = button1Url,
+                    button2Label = button2Label,
+                    button2Url = button2Url,
+                )
+            }
         }
 
         val nameInput = EditTextPreference(context).apply {
@@ -71,6 +106,43 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         }
         addPreference(nameInput)
 
+        val activityTypePref = ListPreference(context).apply {
+            key = KEY_ACTIVITY_TYPE
+            title = context.getString(MR.strings.discord_rpc_activity_type)
+            dialogTitle = title
+            isIconSpaceReserved = false
+            isPersistent = false
+            entries = activityTypeOptions.map { it.second }.toTypedArray()
+            entryValues = activityTypeOptions.map { it.first.value.toString() }.toTypedArray()
+            value = activityType.toString()
+            summary = activityTypeOptions.find { it.first.value == activityType }?.second
+            setOnPreferenceChangeListener { _, newValue ->
+                activityType = (newValue as String).toInt()
+                summary = activityTypeOptions.find { it.first.value == activityType }?.second
+                persist()
+                true
+            }
+        }
+        addPreference(activityTypePref)
+
+        val stateTemplateInput = EditTextPreference(context).apply {
+            key = KEY_STATE_TEMPLATE
+            title = context.getString(MR.strings.discord_rpc_state_template)
+            dialogTitle = title
+            dialogMessage = context.getString(MR.strings.discord_rpc_state_template_summary)
+            isIconSpaceReserved = false
+            isPersistent = false
+            text = activityStateTemplate
+            summary = activityStateTemplate
+            setOnPreferenceChangeListener { _, newValue ->
+                activityStateTemplate = (newValue as String).trim()
+                summary = activityStateTemplate
+                persist()
+                true
+            }
+        }
+        addPreference(stateTemplateInput)
+
         val showIconSwitch = SwitchPreferenceCompat(context).apply {
             key = KEY_SHOW_APP_ICON
             title = context.getString(MR.strings.discord_rpc_show_app_icon)
@@ -85,6 +157,96 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
         addPreference(showIconSwitch)
+
+        val onlineStatusPref = ListPreference(context).apply {
+            key = KEY_ONLINE_STATUS
+            title = context.getString(MR.strings.discord_rpc_online_status)
+            dialogTitle = title
+            summaryProvider = null
+            isIconSpaceReserved = false
+            isPersistent = false
+            entries = onlineStatusOptions.map { it.second }.toTypedArray()
+            entryValues = onlineStatusOptions.map { it.first }.toTypedArray()
+            value = onlineStatus
+            summary = onlineStatusOptions.find { it.first == onlineStatus }?.second
+            setOnPreferenceChangeListener { _, newValue ->
+                onlineStatus = newValue as String
+                summary = onlineStatusOptions.find { it.first == onlineStatus }?.second
+                persist()
+                true
+            }
+        }
+        addPreference(onlineStatusPref)
+
+        val button1LabelInput = EditTextPreference(context).apply {
+            key = KEY_BUTTON1_LABEL
+            title = context.getString(MR.strings.discord_rpc_button1_label)
+            dialogTitle = title
+            isIconSpaceReserved = false
+            isPersistent = false
+            text = button1Label
+            summary = button1Label
+            setOnPreferenceChangeListener { _, newValue ->
+                button1Label = (newValue as String).trim()
+                summary = button1Label
+                persist()
+                true
+            }
+        }
+        addPreference(button1LabelInput)
+
+        val button1UrlInput = EditTextPreference(context).apply {
+            key = KEY_BUTTON1_URL
+            title = context.getString(MR.strings.discord_rpc_button1_url)
+            dialogTitle = title
+            dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
+            isIconSpaceReserved = false
+            isPersistent = false
+            text = button1Url
+            summary = button1Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+            setOnPreferenceChangeListener { _, newValue ->
+                button1Url = (newValue as String).trim()
+                summary = button1Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+                persist()
+                true
+            }
+        }
+        addPreference(button1UrlInput)
+
+        val button2LabelInput = EditTextPreference(context).apply {
+            key = KEY_BUTTON2_LABEL
+            title = context.getString(MR.strings.discord_rpc_button2_label)
+            dialogTitle = title
+            isIconSpaceReserved = false
+            isPersistent = false
+            text = button2Label
+            summary = button2Label
+            setOnPreferenceChangeListener { _, newValue ->
+                button2Label = (newValue as String).trim()
+                summary = button2Label
+                persist()
+                true
+            }
+        }
+        addPreference(button2LabelInput)
+
+        val button2UrlInput = EditTextPreference(context).apply {
+            key = KEY_BUTTON2_URL
+            title = context.getString(MR.strings.discord_rpc_button2_url)
+            dialogTitle = title
+            dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
+            isIconSpaceReserved = false
+            isPersistent = false
+            text = button2Url
+            summary = button2Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+            setOnPreferenceChangeListener { _, newValue ->
+                button2Url = (newValue as String).trim()
+                summary = button2Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+                persist()
+                true
+            }
+        }
+        addPreference(button2UrlInput)
 
         val respectIncognitoSwitch = SwitchPreferenceCompat(context).apply {
             key = KEY_RESPECT_INCOGNITO
@@ -105,7 +267,14 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
     companion object {
         private const val ACCOUNT_ID = "account_id"
         private const val KEY_ACTIVITY_NAME = "discord_account_activity_name"
+        private const val KEY_ACTIVITY_TYPE = "discord_account_activity_type"
+        private const val KEY_STATE_TEMPLATE = "discord_account_state_template"
         private const val KEY_SHOW_APP_ICON = "discord_account_show_app_icon"
+        private const val KEY_ONLINE_STATUS = "discord_account_online_status"
+        private const val KEY_BUTTON1_LABEL = "discord_account_button1_label"
+        private const val KEY_BUTTON1_URL = "discord_account_button1_url"
+        private const val KEY_BUTTON2_LABEL = "discord_account_button2_label"
+        private const val KEY_BUTTON2_URL = "discord_account_button2_url"
         private const val KEY_RESPECT_INCOGNITO = "discord_account_respect_incognito"
     }
 }
