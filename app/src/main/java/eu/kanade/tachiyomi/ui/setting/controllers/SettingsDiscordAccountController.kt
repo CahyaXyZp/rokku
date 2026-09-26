@@ -11,10 +11,11 @@ import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Rich Presence settings for a single Discord account: custom activity name and whether to show
- * the app icon badge. Pushed from [SettingsDiscordAccountsController] when tapping an account -
- * holding an account there removes it instead, no activation control here since accounts go
- * active automatically as soon as they're added.
+ * Rich Presence settings for a single Discord account: custom activity name, whether to show
+ * the app icon badge, and whether Incognito Mode should suppress Rich Presence for this account.
+ * Pushed from [SettingsDiscordAccountsController] when tapping an account - holding an account
+ * there removes it instead, no activation control here since accounts go active automatically
+ * as soon as they're added.
  */
 class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyController(bundle) {
 
@@ -37,6 +38,16 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
         var customActivityName = account.customActivityName
         var showAppIcon = account.showAppIcon
+        var respectIncognito = account.respectIncognito
+
+        fun persist() {
+            connectionsManager.discord.updateAccountSettings(
+                accountId,
+                customActivityName,
+                showAppIcon,
+                respectIncognito,
+            )
+        }
 
         val nameInput = EditTextPreference(context).apply {
             // Not persisted to SharedPreferences (isPersistent = false below), but the dialog
@@ -54,7 +65,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             setOnPreferenceChangeListener { _, newValue ->
                 customActivityName = (newValue as String).trim()
                 summary = customActivityName.ifBlank { context.getString(MR.strings.discord_rpc_activity_name_summary) }
-                connectionsManager.discord.updateAccountSettings(accountId, customActivityName, showAppIcon)
+                persist()
                 true
             }
         }
@@ -69,16 +80,32 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             isChecked = showAppIcon
             setOnPreferenceChangeListener { _, newValue ->
                 showAppIcon = newValue as Boolean
-                connectionsManager.discord.updateAccountSettings(accountId, customActivityName, showAppIcon)
+                persist()
                 true
             }
         }
         addPreference(showIconSwitch)
+
+        val respectIncognitoSwitch = SwitchPreferenceCompat(context).apply {
+            key = KEY_RESPECT_INCOGNITO
+            title = context.getString(MR.strings.discord_rpc_respect_incognito)
+            summary = context.getString(MR.strings.discord_rpc_respect_incognito_summary)
+            isIconSpaceReserved = false
+            isPersistent = false
+            isChecked = respectIncognito
+            setOnPreferenceChangeListener { _, newValue ->
+                respectIncognito = newValue as Boolean
+                persist()
+                true
+            }
+        }
+        addPreference(respectIncognitoSwitch)
     }
 
     companion object {
         private const val ACCOUNT_ID = "account_id"
         private const val KEY_ACTIVITY_NAME = "discord_account_activity_name"
         private const val KEY_SHOW_APP_ICON = "discord_account_show_app_icon"
+        private const val KEY_RESPECT_INCOGNITO = "discord_account_respect_incognito"
     }
 }
