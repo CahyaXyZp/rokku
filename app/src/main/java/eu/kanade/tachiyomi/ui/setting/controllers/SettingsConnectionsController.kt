@@ -4,16 +4,16 @@ import android.app.Activity
 import android.content.Context
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
+import eu.kanade.tachiyomi.ui.setting.add
 import eu.kanade.tachiyomi.ui.setting.bindTo
 import eu.kanade.tachiyomi.ui.setting.iconRes
 import eu.kanade.tachiyomi.ui.setting.onClick
-import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
 import eu.kanade.tachiyomi.ui.setting.switchPreference
 import eu.kanade.tachiyomi.util.view.withFadeTransaction
+import eu.kanade.tachiyomi.widget.preference.TrackerPreference
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
@@ -34,8 +34,8 @@ class SettingsConnectionsController : SettingsLegacyController() {
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         titleRes = MR.strings.connections
 
-        // One-time upgrade from when activity name/app-icon were global instead of per-account -
-        // see Discord.migrateLegacyActivitySettingsIfNeeded() for what this actually does.
+        // One-time upgrade from when activity name/app-icon/respect-incognito were global
+        // instead of per-account - see Discord.migrateLegacyActivitySettingsIfNeeded().
         connectionsManager.discord.migrateLegacyActivitySettingsIfNeeded()
 
         preferenceCategory {
@@ -47,21 +47,22 @@ class SettingsConnectionsController : SettingsLegacyController() {
                 summary = context.getString(MR.strings.discord_rpc_enable_summary)
             }
 
-            accountsPreference = preference {
-                iconRes = R.drawable.ic_discord_24dp
-                titleRes = MR.strings.discord_rpc_connect_account
-                isPersistent = false
-                summary = accountSummary(context)
-                onClick {
-                    router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
-                }
-            }
-
-            switchPreference {
-                bindTo(connectionsPreferences.discordRespectIncognito())
-                titleRes = MR.strings.discord_rpc_respect_incognito
-                summary = context.getString(MR.strings.discord_rpc_respect_incognito_summary)
-            }
+            // Styled like a tracker row (colored logo card, e.g. AniList/MyAnimeList in
+            // Settings > Tracking) rather than a plain preference - "Discord account" as a
+            // title stopped making sense once accounts became a list instead of a single slot.
+            accountsPreference = add(
+                TrackerPreference(context).apply {
+                    key = "discord_connections_entry"
+                    title = context.getString(MR.strings.connections_discord)
+                    iconRes = connectionsManager.discord.getLogo()
+                    iconColor = connectionsManager.discord.getLogoColor()
+                    isPersistent = false
+                    summary = accountSummary(context)
+                    onClick {
+                        router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
+                    }
+                },
+            )
         }
     }
 
