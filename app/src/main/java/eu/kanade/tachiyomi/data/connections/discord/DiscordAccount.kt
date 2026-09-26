@@ -28,4 +28,8 @@ data class DiscordAccount(
     // Discord.migrateLegacyActivitySettingsIfNeeded().
     val customActivityName: String = "",
     val showAppIcon: Boolean = true,
+    // Whether this account's Rich Presence is skipped under Incognito Mode - per account since
+    // each account might be used in a different context. Defaults match the old global
+    // pref_discord_respect_incognito default (also migrated, same as above).
+    val respectIncognito: Boolean = true,
 )
