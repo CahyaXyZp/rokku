@@ -1543,6 +1543,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 totalChapters,
                 manga.thumbnail_url,
                 manga.source,
+                chapterUrl = viewModel.getChapterUrl(),
             )
         }
     }
