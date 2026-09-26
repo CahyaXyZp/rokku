@@ -26,6 +26,8 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.min
+import kotlin.math.pow
 
 sealed interface DiscordWebSocket : CoroutineScope {
     suspend fun sendActivity(presence: Presence)
@@ -36,6 +38,9 @@ sealed interface DiscordWebSocket : CoroutineScope {
  * Maintains a WebSocket connection to the Discord Gateway for a single account token and
  * pushes Rich Presence updates over it. One instance is meant to live per active account,
  * created/closed by whatever manages the foreground RPC service.
+ *
+ * Reconnects automatically on failure with exponential backoff (see [Listener.onFailure]) -
+ * intentional closes (see [close]) never trigger a reconnect.
  */
 open class DiscordWebSocketImpl(
     private val token: String,
@@ -64,6 +69,10 @@ open class DiscordWebSocketImpl(
     private var connected = false
 
     private val connectionState = MutableStateFlow(false)
+
+    // Reset to 0 once the gateway handshake actually succeeds (READY) - see onMessage below -
+    // so a long-lived, healthy connection doesn't inherit backoff from an earlier rough patch.
+    private var reconnectAttempt = 0
 
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
@@ -149,6 +158,7 @@ open class DiscordWebSocketImpl(
                 OpCode.DISPATCH.value -> if (map.t == "READY") {
                     connected = true
                     connectionState.value = true
+                    reconnectAttempt = 0
                 }
 
                 OpCode.HEARTBEAT.value -> {
@@ -171,9 +181,20 @@ open class DiscordWebSocketImpl(
             }
         }
 
+        // Backs off exponentially (1s, 2s, 4s, ... capped at RECONNECT_MAX_DELAY_MS) instead of
+        // reconnecting instantly on every failure - a dead network or a bad token would
+        // otherwise have this hammering new WebSocket attempts in a tight loop.
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             Logger.e(t) { "Discord WebSocket failure" }
-            if (t.message != CLOSE_REASON_INTERRUPT) {
+            if (t.message == CLOSE_REASON_INTERRUPT) return
+
+            val delayMs = min(
+                RECONNECT_BASE_DELAY_MS * 2.0.pow(reconnectAttempt).toLong(),
+                RECONNECT_MAX_DELAY_MS,
+            )
+            reconnectAttempt++
+            scope.launch {
+                delay(delayMs)
                 this@DiscordWebSocketImpl.webSocket = client.newWebSocket(request, Listener())
             }
         }
@@ -184,3 +205,5 @@ private const val CONNECTION_TIMEOUT_MS = 30_000L
 private const val NORMAL_CLOSURE_CODE = 4000
 private const val RECONNECT_CLOSE_CODE = 400
 private const val CLOSE_REASON_INTERRUPT = "Interrupt"
+private const val RECONNECT_BASE_DELAY_MS = 1_000L
+private const val RECONNECT_MAX_DELAY_MS = 60_000L
