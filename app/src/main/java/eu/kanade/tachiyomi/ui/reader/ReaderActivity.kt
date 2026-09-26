@@ -1513,14 +1513,16 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
 
     override fun onPause() {
         viewModel.flushReadTimer()
-        DiscordRPCService.stop(this)
+        DiscordRPCService.scheduleStop(this, viewModel.manga?.id)
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
-        DiscordRPCService.start(this, sourceId = viewModel.manga?.source)
+        if (!DiscordRPCService.resumeReading(viewModel.manga?.id)) {
+            DiscordRPCService.start(this, sourceId = viewModel.manga?.source)
+        }
         updateDiscordActivity()
     }
 
