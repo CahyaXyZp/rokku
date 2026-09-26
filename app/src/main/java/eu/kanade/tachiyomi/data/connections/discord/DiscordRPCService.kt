@@ -167,6 +167,30 @@ class DiscordRPCService : Service() {
             return isIncognitoModeForSource(sourceId, preferences, extensionManager)
         }
 
+        /**
+         * Resolves both of [account]'s configured buttons, substituting [TEMPLATE_CHAPTER_URL]
+         * with [chapterUrl]. A button is dropped entirely if its label or resolved url end up
+         * blank (including a `{chapter_url}` placeholder left unresolved because [chapterUrl]
+         * is null) - Discord rejects buttons with an empty label/url.
+         */
+        private fun resolveButtons(account: DiscordAccount, chapterUrl: String?): List<Activity.Button> {
+            fun resolve(label: String, url: String): Activity.Button? {
+                val resolvedUrl = url.replace(TEMPLATE_CHAPTER_URL, chapterUrl.orEmpty())
+                if (label.isBlank() || resolvedUrl.isBlank()) return null
+                return Activity.Button(label, resolvedUrl)
+            }
+            return listOfNotNull(
+                resolve(account.button1Label, account.button1Url),
+                resolve(account.button2Label, account.button2Url),
+            )
+        }
+
+        private fun sdkOnlineStatus(status: String) = when (status) {
+            DiscordOnlineStatus.IDLE -> DiscordRpcManager.OnlineStatus.Idle
+            DiscordOnlineStatus.DND -> DiscordRpcManager.OnlineStatus.DoNotDisturb
+            else -> DiscordRpcManager.OnlineStatus.Online
+        }
+
         fun start(
             context: Context,
             sourceId: Long? = null,
@@ -273,13 +297,13 @@ class DiscordRPCService : Service() {
         }
 
         /**
-         * Updates the Rich Presence: Activity "Watching", Details [title],
-         * State "Chapter [currentChapter] of [totalChapters]", Timestamp elapsed since the
-         * service started. The large image is the manga's own cover ([coverUrl]); the app
-         * icon is only ever attached as a small badge on top of it, and only when the active
-         * account's "Show app icon" setting is enabled. No-ops while [sourceId] is under
-         * Incognito Mode (global or per-extension) and the active account's "Respect Incognito
-         * Mode" is on, or if there's no active account.
+         * Updates the Rich Presence using the active account's own settings: activity type,
+         * a state built from its `{chapter}`/`{total}` template, its custom online status, its
+         * two configured buttons (each resolving a `{chapter_url}` placeholder against
+         * [chapterUrl], dropped if still blank after that), and the large/small images as
+         * before. No-ops while [sourceId] is under Incognito Mode (global or per-extension)
+         * and the active account's "Respect Incognito Mode" is on, or if there's no active
+         * account.
          */
         fun setReadingActivity(
             context: Context,
@@ -288,6 +312,7 @@ class DiscordRPCService : Service() {
             totalChapters: Int,
             coverUrl: String?,
             sourceId: Long? = null,
+            chapterUrl: String? = null,
             connectionsManager: ConnectionsManager = Injekt.get(),
             preferences: PreferencesHelper = Injekt.get(),
             extensionManager: ExtensionManager = Injekt.get(),
@@ -299,7 +324,10 @@ class DiscordRPCService : Service() {
                 val appName = context.getString(MR.strings.app_name)
                 val showAppIcon = account.showAppIcon
                 val name = account.customActivityName.ifBlank { appName }
-                val state = context.getString(MR.strings.chapter_x_of_y, currentChapter, totalChapters)
+                val state = account.activityStateTemplate
+                    .replace(TEMPLATE_CHAPTER, currentChapter.toString())
+                    .replace(TEMPLATE_TOTAL, totalChapters.toString())
+                val buttons = resolveButtons(account, chapterUrl)
 
                 if (usingSdk) {
                     // The native SDK takes image URLs directly rather than the pre-resolved
@@ -307,6 +335,7 @@ class DiscordRPCService : Service() {
                     // against a real device/account yet, worth double-checking that Discord
                     // actually renders a bare https cover URL as the large image here.
                     val smallImage = if (coverUrl != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
+                    DiscordRpcManager.setOnlineStatus(sdkOnlineStatus(account.onlineStatus))
                     DiscordRpcManager.setActivity(
                         DiscordNativeActivity(
                             name = name,
@@ -317,6 +346,11 @@ class DiscordRPCService : Service() {
                             largeText = title,
                             smallImage = smallImage,
                             smallText = smallImage?.let { appName },
+                            button1Label = buttons.getOrNull(0)?.label,
+                            button1Url = buttons.getOrNull(0)?.url,
+                            button2Label = buttons.getOrNull(1)?.label,
+                            button2Url = buttons.getOrNull(1)?.url,
+                            activityType = account.activityType,
                         ),
                     )
                 } else {
@@ -332,7 +366,7 @@ class DiscordRPCService : Service() {
                             name = name,
                             details = title,
                             state = state,
-                            type = ActivityType.WATCHING.value,
+                            type = account.activityType,
                             timestamps = Activity.Timestamps(start = since),
                             assets = largeImage?.let {
                                 Activity.Assets(
@@ -342,8 +376,10 @@ class DiscordRPCService : Service() {
                                     smallText = smallImage?.let { appName },
                                 )
                             },
+                            buttons = buttons.ifEmpty { null },
                         ),
                         since = since,
+                        status = account.onlineStatus,
                     )
                 }
             }
