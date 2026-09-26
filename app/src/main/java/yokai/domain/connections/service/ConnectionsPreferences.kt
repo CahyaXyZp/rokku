@@ -39,6 +39,10 @@ class ConnectionsPreferences(
 
     fun discordShowAppIcon() = preferenceStore.getBoolean("pref_discord_show_app_icon", true)
 
+    // Default true matches the old hardcoded behavior - Rich Presence has always been skipped
+    // under Incognito Mode, this just makes that toggleable instead of forced.
+    fun discordRespectIncognito() = preferenceStore.getBoolean("pref_discord_respect_incognito", true)
+
     companion object {
         fun connectionsUsername(syncId: Long) = Preference.privateKey("pref_connections_username_$syncId")
 
