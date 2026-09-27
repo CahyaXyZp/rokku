@@ -181,9 +181,14 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         }
         addPreference(onlineStatusPref)
 
-        // The dependency-key wiring below (dependency = KEY_BUTTON1_ENABLED) needs the switch
-        // it points at already attached to the screen, so each "enable" switch is added before
-        // its own label/url preferences.
+        // Each "enable" switch is added to the screen before its label/url preferences, and
+        // `.dependency = ...` on those is set only AFTER they themselves are added - a
+        // preference has no PreferenceManager to search until it's attached
+        // (addPreference/onAttachedToHierarchy), and Preference.setDependency() tries to
+        // resolve the target through that manager immediately, synchronously. Setting
+        // dependency inside the same apply{} block that builds the preference (i.e. before
+        // it's attached) throws "Dependency ... not found" even though the target switch
+        // above is already attached and would resolve fine once this preference is too.
         val button1EnabledSwitch = SwitchPreferenceCompat(context).apply {
             key = KEY_BUTTON1_ENABLED
             title = context.getString(MR.strings.discord_rpc_button1_enabled)
@@ -200,7 +205,6 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
         val button1LabelInput = EditTextPreference(context).apply {
             key = KEY_BUTTON1_LABEL
-            dependency = KEY_BUTTON1_ENABLED
             title = context.getString(MR.strings.discord_rpc_button1_label)
             dialogTitle = title
             isIconSpaceReserved = false
@@ -215,10 +219,10 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
         addPreference(button1LabelInput)
+        button1LabelInput.dependency = KEY_BUTTON1_ENABLED
 
         val button1UrlInput = EditTextPreference(context).apply {
             key = KEY_BUTTON1_URL
-            dependency = KEY_BUTTON1_ENABLED
             title = context.getString(MR.strings.discord_rpc_button1_url)
             dialogTitle = title
             dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
@@ -234,6 +238,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
         addPreference(button1UrlInput)
+        button1UrlInput.dependency = KEY_BUTTON1_ENABLED
 
         val button2EnabledSwitch = SwitchPreferenceCompat(context).apply {
             key = KEY_BUTTON2_ENABLED
@@ -251,7 +256,6 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
         val button2LabelInput = EditTextPreference(context).apply {
             key = KEY_BUTTON2_LABEL
-            dependency = KEY_BUTTON2_ENABLED
             title = context.getString(MR.strings.discord_rpc_button2_label)
             dialogTitle = title
             isIconSpaceReserved = false
@@ -266,10 +270,10 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
         addPreference(button2LabelInput)
+        button2LabelInput.dependency = KEY_BUTTON2_ENABLED
 
         val button2UrlInput = EditTextPreference(context).apply {
             key = KEY_BUTTON2_URL
-            dependency = KEY_BUTTON2_ENABLED
             title = context.getString(MR.strings.discord_rpc_button2_url)
             dialogTitle = title
             dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
@@ -285,6 +289,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
         addPreference(button2UrlInput)
+        button2UrlInput.dependency = KEY_BUTTON2_ENABLED
 
         val respectIncognitoSwitch = SwitchPreferenceCompat(context).apply {
             key = KEY_RESPECT_INCOGNITO
