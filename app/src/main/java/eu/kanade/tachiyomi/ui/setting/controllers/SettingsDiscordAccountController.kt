@@ -9,16 +9,18 @@ import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.connections.discord.ActivityType
 import eu.kanade.tachiyomi.data.connections.discord.DiscordOnlineStatus
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
+import eu.kanade.tachiyomi.ui.setting.preferenceCategory
 import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Rich Presence settings for a single Discord account - activity name/type/state template, app
- * icon badge, online status, up to two toggleable buttons, and whether Incognito Mode should
- * suppress Rich Presence for this account. Pushed from [SettingsDiscordAccountsController] when
- * tapping an account - holding an account there removes it instead, no activation control here
- * since accounts go active automatically as soon as they're added.
+ * Rich Presence settings for a single Discord account, grouped into Activity/Appearance/
+ * Buttons/Privacy sections: activity name/type/state template, app icon badge, online status,
+ * up to two toggleable buttons, and whether Incognito Mode should suppress Rich Presence for
+ * this account. Pushed from [SettingsDiscordAccountsController] when tapping an account -
+ * holding an account there removes it instead, no activation control here since accounts go
+ * active automatically as soon as they're added.
  */
 class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyController(bundle) {
 
@@ -88,223 +90,241 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
             }
         }
 
-        val nameInput = EditTextPreference(context).apply {
-            // Not persisted to SharedPreferences (isPersistent = false below), but the dialog
-            // framework still looks the preference up by key when the edit dialog is opened
-            // (PreferenceManager.showDialog -> findPreference) - without one it throws
-            // "Key cannot be null" as soon as this preference is tapped.
-            key = KEY_ACTIVITY_NAME
-            title = context.getString(MR.strings.discord_rpc_activity_name)
-            dialogTitle = title
-            dialogMessage = context.getString(MR.strings.discord_rpc_activity_name_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = customActivityName
-            summary = customActivityName.ifBlank { context.getString(MR.strings.discord_rpc_activity_name_summary) }
-            setOnPreferenceChangeListener { _, newValue ->
-                customActivityName = (newValue as String).trim()
-                summary = customActivityName.ifBlank { context.getString(MR.strings.discord_rpc_activity_name_summary) }
-                persist()
-                true
-            }
-        }
-        addPreference(nameInput)
+        preferenceCategory {
+            title = context.getString(MR.strings.discord_rpc_section_activity)
 
-        val activityTypePref = ListPreference(context).apply {
-            key = KEY_ACTIVITY_TYPE
-            title = context.getString(MR.strings.discord_rpc_activity_type)
-            dialogTitle = title
-            isIconSpaceReserved = false
-            isPersistent = false
-            entries = activityTypeOptions.map { it.second }.toTypedArray()
-            entryValues = activityTypeOptions.map { it.first.value.toString() }.toTypedArray()
-            value = activityType.toString()
-            summary = activityTypeOptions.find { it.first.value == activityType }?.second
-            setOnPreferenceChangeListener { _, newValue ->
-                activityType = (newValue as String).toInt()
+            val nameInput = EditTextPreference(context).apply {
+                // Not persisted to SharedPreferences (isPersistent = false below), but the
+                // dialog framework still looks the preference up by key when the edit dialog
+                // is opened (PreferenceManager.showDialog -> findPreference) - without one it
+                // throws "Key cannot be null" as soon as this preference is tapped.
+                key = KEY_ACTIVITY_NAME
+                title = context.getString(MR.strings.discord_rpc_activity_name)
+                dialogTitle = title
+                dialogMessage = context.getString(MR.strings.discord_rpc_activity_name_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = customActivityName
+                summary =
+                    customActivityName.ifBlank { context.getString(MR.strings.discord_rpc_activity_name_summary) }
+                setOnPreferenceChangeListener { _, newValue ->
+                    customActivityName = (newValue as String).trim()
+                    summary =
+                        customActivityName.ifBlank { context.getString(MR.strings.discord_rpc_activity_name_summary) }
+                    persist()
+                    true
+                }
+            }
+            addPreference(nameInput)
+
+            val activityTypePref = ListPreference(context).apply {
+                key = KEY_ACTIVITY_TYPE
+                title = context.getString(MR.strings.discord_rpc_activity_type)
+                dialogTitle = title
+                isIconSpaceReserved = false
+                isPersistent = false
+                entries = activityTypeOptions.map { it.second }.toTypedArray()
+                entryValues = activityTypeOptions.map { it.first.value.toString() }.toTypedArray()
+                value = activityType.toString()
                 summary = activityTypeOptions.find { it.first.value == activityType }?.second
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    activityType = (newValue as String).toInt()
+                    summary = activityTypeOptions.find { it.first.value == activityType }?.second
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(activityTypePref)
+            addPreference(activityTypePref)
 
-        val stateTemplateInput = EditTextPreference(context).apply {
-            key = KEY_STATE_TEMPLATE
-            title = context.getString(MR.strings.discord_rpc_state_template)
-            dialogTitle = title
-            dialogMessage = context.getString(MR.strings.discord_rpc_state_template_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = activityStateTemplate
-            summary = activityStateTemplate
-            setOnPreferenceChangeListener { _, newValue ->
-                activityStateTemplate = (newValue as String).trim()
+            val stateTemplateInput = EditTextPreference(context).apply {
+                key = KEY_STATE_TEMPLATE
+                title = context.getString(MR.strings.discord_rpc_state_template)
+                dialogTitle = title
+                dialogMessage = context.getString(MR.strings.discord_rpc_state_template_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = activityStateTemplate
                 summary = activityStateTemplate
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    activityStateTemplate = (newValue as String).trim()
+                    summary = activityStateTemplate
+                    persist()
+                    true
+                }
             }
+            addPreference(stateTemplateInput)
         }
-        addPreference(stateTemplateInput)
 
-        val showIconSwitch = SwitchPreferenceCompat(context).apply {
-            key = KEY_SHOW_APP_ICON
-            title = context.getString(MR.strings.discord_rpc_show_app_icon)
-            summary = context.getString(MR.strings.discord_rpc_show_app_icon_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            isChecked = showAppIcon
-            setOnPreferenceChangeListener { _, newValue ->
-                showAppIcon = newValue as Boolean
-                persist()
-                true
+        preferenceCategory {
+            title = context.getString(MR.strings.appearance)
+
+            val showIconSwitch = SwitchPreferenceCompat(context).apply {
+                key = KEY_SHOW_APP_ICON
+                title = context.getString(MR.strings.discord_rpc_show_app_icon)
+                summary = context.getString(MR.strings.discord_rpc_show_app_icon_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                isChecked = showAppIcon
+                setOnPreferenceChangeListener { _, newValue ->
+                    showAppIcon = newValue as Boolean
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(showIconSwitch)
+            addPreference(showIconSwitch)
 
-        val onlineStatusPref = ListPreference(context).apply {
-            key = KEY_ONLINE_STATUS
-            title = context.getString(MR.strings.discord_rpc_online_status)
-            dialogTitle = title
-            isIconSpaceReserved = false
-            isPersistent = false
-            entries = onlineStatusOptions.map { it.second }.toTypedArray()
-            entryValues = onlineStatusOptions.map { it.first }.toTypedArray()
-            value = onlineStatus
-            summary = onlineStatusOptions.find { it.first == onlineStatus }?.second
-            setOnPreferenceChangeListener { _, newValue ->
-                onlineStatus = newValue as String
+            val onlineStatusPref = ListPreference(context).apply {
+                key = KEY_ONLINE_STATUS
+                title = context.getString(MR.strings.discord_rpc_online_status)
+                dialogTitle = title
+                isIconSpaceReserved = false
+                isPersistent = false
+                entries = onlineStatusOptions.map { it.second }.toTypedArray()
+                entryValues = onlineStatusOptions.map { it.first }.toTypedArray()
+                value = onlineStatus
                 summary = onlineStatusOptions.find { it.first == onlineStatus }?.second
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    onlineStatus = newValue as String
+                    summary = onlineStatusOptions.find { it.first == onlineStatus }?.second
+                    persist()
+                    true
+                }
             }
+            addPreference(onlineStatusPref)
         }
-        addPreference(onlineStatusPref)
 
-        // Each "enable" switch is added to the screen before its label/url preferences, and
-        // `.dependency = ...` on those is set only AFTER they themselves are added - a
-        // preference has no PreferenceManager to search until it's attached
-        // (addPreference/onAttachedToHierarchy), and Preference.setDependency() tries to
-        // resolve the target through that manager immediately, synchronously. Setting
-        // dependency inside the same apply{} block that builds the preference (i.e. before
-        // it's attached) throws "Dependency ... not found" even though the target switch
-        // above is already attached and would resolve fine once this preference is too.
-        val button1EnabledSwitch = SwitchPreferenceCompat(context).apply {
-            key = KEY_BUTTON1_ENABLED
-            title = context.getString(MR.strings.discord_rpc_button1_enabled)
-            isIconSpaceReserved = false
-            isPersistent = false
-            isChecked = button1Enabled
-            setOnPreferenceChangeListener { _, newValue ->
-                button1Enabled = newValue as Boolean
-                persist()
-                true
+        preferenceCategory {
+            title = context.getString(MR.strings.discord_rpc_section_buttons)
+
+            // Each "enable" switch is added before its label/url preferences, and
+            // `.dependency = ...` on those is set only AFTER they themselves are added - a
+            // preference has no PreferenceManager to search until it's attached
+            // (addPreference/onAttachedToHierarchy), and Preference.setDependency() tries to
+            // resolve the target through that manager immediately, synchronously. Setting
+            // dependency inside the same apply{} block that builds the preference (i.e.
+            // before it's attached) throws "Dependency ... not found" even though the target
+            // switch above is already attached and would resolve fine once this one is too.
+            val button1EnabledSwitch = SwitchPreferenceCompat(context).apply {
+                key = KEY_BUTTON1_ENABLED
+                title = context.getString(MR.strings.discord_rpc_button1_enabled)
+                isIconSpaceReserved = false
+                isPersistent = false
+                isChecked = button1Enabled
+                setOnPreferenceChangeListener { _, newValue ->
+                    button1Enabled = newValue as Boolean
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(button1EnabledSwitch)
+            addPreference(button1EnabledSwitch)
 
-        val button1LabelInput = EditTextPreference(context).apply {
-            key = KEY_BUTTON1_LABEL
-            title = context.getString(MR.strings.discord_rpc_button1_label)
-            dialogTitle = title
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = button1Label
-            summary = button1Label
-            setOnPreferenceChangeListener { _, newValue ->
-                button1Label = (newValue as String).trim()
+            val button1LabelInput = EditTextPreference(context).apply {
+                key = KEY_BUTTON1_LABEL
+                title = context.getString(MR.strings.discord_rpc_button1_label)
+                dialogTitle = title
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = button1Label
                 summary = button1Label
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    button1Label = (newValue as String).trim()
+                    summary = button1Label
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(button1LabelInput)
-        button1LabelInput.dependency = KEY_BUTTON1_ENABLED
+            addPreference(button1LabelInput)
+            button1LabelInput.dependency = KEY_BUTTON1_ENABLED
 
-        val button1UrlInput = EditTextPreference(context).apply {
-            key = KEY_BUTTON1_URL
-            title = context.getString(MR.strings.discord_rpc_button1_url)
-            dialogTitle = title
-            dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = button1Url
-            summary = button1Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
-            setOnPreferenceChangeListener { _, newValue ->
-                button1Url = (newValue as String).trim()
+            val button1UrlInput = EditTextPreference(context).apply {
+                key = KEY_BUTTON1_URL
+                title = context.getString(MR.strings.discord_rpc_button1_url)
+                dialogTitle = title
+                dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = button1Url
                 summary = button1Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    button1Url = (newValue as String).trim()
+                    summary = button1Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(button1UrlInput)
-        button1UrlInput.dependency = KEY_BUTTON1_ENABLED
+            addPreference(button1UrlInput)
+            button1UrlInput.dependency = KEY_BUTTON1_ENABLED
 
-        val button2EnabledSwitch = SwitchPreferenceCompat(context).apply {
-            key = KEY_BUTTON2_ENABLED
-            title = context.getString(MR.strings.discord_rpc_button2_enabled)
-            isIconSpaceReserved = false
-            isPersistent = false
-            isChecked = button2Enabled
-            setOnPreferenceChangeListener { _, newValue ->
-                button2Enabled = newValue as Boolean
-                persist()
-                true
+            val button2EnabledSwitch = SwitchPreferenceCompat(context).apply {
+                key = KEY_BUTTON2_ENABLED
+                title = context.getString(MR.strings.discord_rpc_button2_enabled)
+                isIconSpaceReserved = false
+                isPersistent = false
+                isChecked = button2Enabled
+                setOnPreferenceChangeListener { _, newValue ->
+                    button2Enabled = newValue as Boolean
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(button2EnabledSwitch)
+            addPreference(button2EnabledSwitch)
 
-        val button2LabelInput = EditTextPreference(context).apply {
-            key = KEY_BUTTON2_LABEL
-            title = context.getString(MR.strings.discord_rpc_button2_label)
-            dialogTitle = title
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = button2Label
-            summary = button2Label
-            setOnPreferenceChangeListener { _, newValue ->
-                button2Label = (newValue as String).trim()
+            val button2LabelInput = EditTextPreference(context).apply {
+                key = KEY_BUTTON2_LABEL
+                title = context.getString(MR.strings.discord_rpc_button2_label)
+                dialogTitle = title
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = button2Label
                 summary = button2Label
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    button2Label = (newValue as String).trim()
+                    summary = button2Label
+                    persist()
+                    true
+                }
             }
-        }
-        addPreference(button2LabelInput)
-        button2LabelInput.dependency = KEY_BUTTON2_ENABLED
+            addPreference(button2LabelInput)
+            button2LabelInput.dependency = KEY_BUTTON2_ENABLED
 
-        val button2UrlInput = EditTextPreference(context).apply {
-            key = KEY_BUTTON2_URL
-            title = context.getString(MR.strings.discord_rpc_button2_url)
-            dialogTitle = title
-            dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            text = button2Url
-            summary = button2Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
-            setOnPreferenceChangeListener { _, newValue ->
-                button2Url = (newValue as String).trim()
+            val button2UrlInput = EditTextPreference(context).apply {
+                key = KEY_BUTTON2_URL
+                title = context.getString(MR.strings.discord_rpc_button2_url)
+                dialogTitle = title
+                dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                text = button2Url
                 summary = button2Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
-                persist()
-                true
+                setOnPreferenceChangeListener { _, newValue ->
+                    button2Url = (newValue as String).trim()
+                    summary = button2Url.ifBlank { context.getString(MR.strings.discord_rpc_button_url_summary) }
+                    persist()
+                    true
+                }
             }
+            addPreference(button2UrlInput)
+            button2UrlInput.dependency = KEY_BUTTON2_ENABLED
         }
-        addPreference(button2UrlInput)
-        button2UrlInput.dependency = KEY_BUTTON2_ENABLED
 
-        val respectIncognitoSwitch = SwitchPreferenceCompat(context).apply {
-            key = KEY_RESPECT_INCOGNITO
-            title = context.getString(MR.strings.discord_rpc_respect_incognito)
-            summary = context.getString(MR.strings.discord_rpc_respect_incognito_summary)
-            isIconSpaceReserved = false
-            isPersistent = false
-            isChecked = respectIncognito
-            setOnPreferenceChangeListener { _, newValue ->
-                respectIncognito = newValue as Boolean
-                persist()
-                true
+        preferenceCategory {
+            title = context.getString(MR.strings.discord_rpc_section_privacy)
+
+            val respectIncognitoSwitch = SwitchPreferenceCompat(context).apply {
+                key = KEY_RESPECT_INCOGNITO
+                title = context.getString(MR.strings.discord_rpc_respect_incognito)
+                summary = context.getString(MR.strings.discord_rpc_respect_incognito_summary)
+                isIconSpaceReserved = false
+                isPersistent = false
+                isChecked = respectIncognito
+                setOnPreferenceChangeListener { _, newValue ->
+                    respectIncognito = newValue as Boolean
+                    persist()
+                    true
+                }
             }
+            addPreference(respectIncognitoSwitch)
         }
-        addPreference(respectIncognitoSwitch)
     }
 
     companion object {
