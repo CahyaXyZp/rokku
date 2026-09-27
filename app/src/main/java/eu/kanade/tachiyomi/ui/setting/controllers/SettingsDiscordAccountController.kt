@@ -15,10 +15,10 @@ import yokai.util.lang.getString
 
 /**
  * Rich Presence settings for a single Discord account - activity name/type/state template, app
- * icon badge, online status, up to two buttons, and whether Incognito Mode should suppress Rich
- * Presence for this account. Pushed from [SettingsDiscordAccountsController] when tapping an
- * account - holding an account there removes it instead, no activation control here since
- * accounts go active automatically as soon as they're added.
+ * icon badge, online status, up to two toggleable buttons, and whether Incognito Mode should
+ * suppress Rich Presence for this account. Pushed from [SettingsDiscordAccountsController] when
+ * tapping an account - holding an account there removes it instead, no activation control here
+ * since accounts go active automatically as soon as they're added.
  */
 class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyController(bundle) {
 
@@ -62,8 +62,10 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         var activityType = account.activityType
         var activityStateTemplate = account.activityStateTemplate
         var onlineStatus = account.onlineStatus
+        var button1Enabled = account.button1Enabled
         var button1Label = account.button1Label
         var button1Url = account.button1Url
+        var button2Enabled = account.button2Enabled
         var button2Label = account.button2Label
         var button2Url = account.button2Url
 
@@ -76,8 +78,10 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
                     activityType = activityType,
                     activityStateTemplate = activityStateTemplate,
                     onlineStatus = onlineStatus,
+                    button1Enabled = button1Enabled,
                     button1Label = button1Label,
                     button1Url = button1Url,
+                    button2Enabled = button2Enabled,
                     button2Label = button2Label,
                     button2Url = button2Url,
                 )
@@ -177,8 +181,26 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         }
         addPreference(onlineStatusPref)
 
+        // The dependency-key wiring below (dependency = KEY_BUTTON1_ENABLED) needs the switch
+        // it points at already attached to the screen, so each "enable" switch is added before
+        // its own label/url preferences.
+        val button1EnabledSwitch = SwitchPreferenceCompat(context).apply {
+            key = KEY_BUTTON1_ENABLED
+            title = context.getString(MR.strings.discord_rpc_button1_enabled)
+            isIconSpaceReserved = false
+            isPersistent = false
+            isChecked = button1Enabled
+            setOnPreferenceChangeListener { _, newValue ->
+                button1Enabled = newValue as Boolean
+                persist()
+                true
+            }
+        }
+        addPreference(button1EnabledSwitch)
+
         val button1LabelInput = EditTextPreference(context).apply {
             key = KEY_BUTTON1_LABEL
+            dependency = KEY_BUTTON1_ENABLED
             title = context.getString(MR.strings.discord_rpc_button1_label)
             dialogTitle = title
             isIconSpaceReserved = false
@@ -196,6 +218,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
         val button1UrlInput = EditTextPreference(context).apply {
             key = KEY_BUTTON1_URL
+            dependency = KEY_BUTTON1_ENABLED
             title = context.getString(MR.strings.discord_rpc_button1_url)
             dialogTitle = title
             dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
@@ -212,8 +235,23 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         }
         addPreference(button1UrlInput)
 
+        val button2EnabledSwitch = SwitchPreferenceCompat(context).apply {
+            key = KEY_BUTTON2_ENABLED
+            title = context.getString(MR.strings.discord_rpc_button2_enabled)
+            isIconSpaceReserved = false
+            isPersistent = false
+            isChecked = button2Enabled
+            setOnPreferenceChangeListener { _, newValue ->
+                button2Enabled = newValue as Boolean
+                persist()
+                true
+            }
+        }
+        addPreference(button2EnabledSwitch)
+
         val button2LabelInput = EditTextPreference(context).apply {
             key = KEY_BUTTON2_LABEL
+            dependency = KEY_BUTTON2_ENABLED
             title = context.getString(MR.strings.discord_rpc_button2_label)
             dialogTitle = title
             isIconSpaceReserved = false
@@ -231,6 +269,7 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
 
         val button2UrlInput = EditTextPreference(context).apply {
             key = KEY_BUTTON2_URL
+            dependency = KEY_BUTTON2_ENABLED
             title = context.getString(MR.strings.discord_rpc_button2_url)
             dialogTitle = title
             dialogMessage = context.getString(MR.strings.discord_rpc_button_url_summary)
@@ -270,8 +309,10 @@ class SettingsDiscordAccountController(bundle: Bundle) : SettingsLegacyControlle
         private const val KEY_STATE_TEMPLATE = "discord_account_state_template"
         private const val KEY_SHOW_APP_ICON = "discord_account_show_app_icon"
         private const val KEY_ONLINE_STATUS = "discord_account_online_status"
+        private const val KEY_BUTTON1_ENABLED = "discord_account_button1_enabled"
         private const val KEY_BUTTON1_LABEL = "discord_account_button1_label"
         private const val KEY_BUTTON1_URL = "discord_account_button1_url"
+        private const val KEY_BUTTON2_ENABLED = "discord_account_button2_enabled"
         private const val KEY_BUTTON2_LABEL = "discord_account_button2_label"
         private const val KEY_BUTTON2_URL = "discord_account_button2_url"
         private const val KEY_RESPECT_INCOGNITO = "discord_account_respect_incognito"
