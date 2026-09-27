@@ -714,6 +714,9 @@
     <string name="discord_rpc_button_url_summary">Use {chapter_url} for the chapter currently being read. Leave blank to hide this button</string>
     <string name="discord_rpc_button1_enabled">Enable Button 1</string>
     <string name="discord_rpc_button2_enabled">Enable Button 2</string>
+    <string name="discord_rpc_section_activity">Activity</string>
+    <string name="discord_rpc_section_buttons">Buttons</string>
+    <string name="discord_rpc_section_privacy">Privacy</string>
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
