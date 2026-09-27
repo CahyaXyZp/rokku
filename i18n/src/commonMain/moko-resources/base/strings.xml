@@ -712,6 +712,8 @@
     <string name="discord_rpc_button2_label">Button 2 label</string>
     <string name="discord_rpc_button2_url">Button 2 URL</string>
     <string name="discord_rpc_button_url_summary">Use {chapter_url} for the chapter currently being read. Leave blank to hide this button</string>
+    <string name="discord_rpc_button1_enabled">Enable Button 1</string>
+    <string name="discord_rpc_button2_enabled">Enable Button 2</string>
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
