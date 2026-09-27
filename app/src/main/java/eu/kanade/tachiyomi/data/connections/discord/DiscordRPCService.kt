@@ -169,19 +169,21 @@ class DiscordRPCService : Service() {
 
         /**
          * Resolves both of [account]'s configured buttons, substituting [TEMPLATE_CHAPTER_URL]
-         * with [chapterUrl]. A button is dropped entirely if its label or resolved url end up
-         * blank (including a `{chapter_url}` placeholder left unresolved because [chapterUrl]
-         * is null) - Discord rejects buttons with an empty label/url.
+         * with [chapterUrl]. A button is dropped entirely if it isn't switched on
+         * (button1Enabled/button2Enabled), or if its label or resolved url end up blank
+         * (including a `{chapter_url}` placeholder left unresolved because [chapterUrl] is
+         * null) - Discord rejects buttons with an empty label/url.
          */
         private fun resolveButtons(account: DiscordAccount, chapterUrl: String?): List<Activity.Button> {
-            fun resolve(label: String, url: String): Activity.Button? {
+            fun resolve(enabled: Boolean, label: String, url: String): Activity.Button? {
+                if (!enabled) return null
                 val resolvedUrl = url.replace(TEMPLATE_CHAPTER_URL, chapterUrl.orEmpty())
                 if (label.isBlank() || resolvedUrl.isBlank()) return null
                 return Activity.Button(label, resolvedUrl)
             }
             return listOfNotNull(
-                resolve(account.button1Label, account.button1Url),
-                resolve(account.button2Label, account.button2Url),
+                resolve(account.button1Enabled, account.button1Label, account.button1Url),
+                resolve(account.button2Enabled, account.button2Label, account.button2Url),
             )
         }
 
