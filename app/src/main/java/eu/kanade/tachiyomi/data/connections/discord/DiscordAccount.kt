@@ -52,11 +52,15 @@ data class DiscordAccount(
     val activityStateTemplate: String = DEFAULT_ACTIVITY_STATE_TEMPLATE,
     // One of DiscordOnlineStatus's constants.
     val onlineStatus: String = DiscordOnlineStatus.ONLINE,
-    // A button is only sent if both its label and url are non-blank after placeholder
-    // resolution - see DiscordRPCService.setReadingActivity(). Defaults to the two buttons
-    // asked for: the chapter being read, and this project's repo.
+    // Off by default - a button is only sent when its own enabled flag is true AND its label/url
+    // are non-blank after placeholder resolution (see DiscordRPCService.resolveButtons()). The
+    // label/url below default to the two buttons asked for (chapter being read, this project's
+    // repo) as a preset ready to go the moment either is switched on, without appearing on their
+    // own before that.
+    val button1Enabled: Boolean = false,
     val button1Label: String = "Read Chapter",
     val button1Url: String = TEMPLATE_CHAPTER_URL,
+    val button2Enabled: Boolean = false,
     val button2Label: String = "Source Code",
     val button2Url: String = "https://github.com/CahyaXyZp/rokku",
 )
