@@ -29,13 +29,13 @@ class SettingsConnectionsController : SettingsLegacyController() {
     private val connectionsManager: ConnectionsManager by injectLazy()
     private val connectionsPreferences: ConnectionsPreferences by injectLazy()
 
-    private var accountsPreference: Preference? = null
+    private var accountPreference: Preference? = null
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         titleRes = MR.strings.connections
 
         // One-time upgrade from when activity name/app-icon/respect-incognito were global
-        // instead of per-account - see Discord.migrateLegacyActivitySettingsIfNeeded().
+        // instead of stored on the account - see Discord.migrateLegacyActivitySettingsIfNeeded().
         connectionsManager.discord.migrateLegacyActivitySettingsIfNeeded()
 
         preferenceCategory {
@@ -48,9 +48,8 @@ class SettingsConnectionsController : SettingsLegacyController() {
             }
 
             // Styled like a tracker row (colored logo card, e.g. AniList/MyAnimeList in
-            // Settings > Tracking) rather than a plain preference - "Discord account" as a
-            // title stopped making sense once accounts became a list instead of a single slot.
-            accountsPreference = add(
+            // Settings > Tracking) rather than a plain preference.
+            accountPreference = add(
                 TrackerPreference(context).apply {
                     key = "discord_connections_entry"
                     title = context.getString(MR.strings.connections_discord)
@@ -59,7 +58,7 @@ class SettingsConnectionsController : SettingsLegacyController() {
                     isPersistent = false
                     summary = accountSummary(context)
                     onClick {
-                        router.pushController(SettingsDiscordAccountsController().withFadeTransaction())
+                        router.pushController(SettingsDiscordAccountController().withFadeTransaction())
                     }
                 },
             )
@@ -68,15 +67,11 @@ class SettingsConnectionsController : SettingsLegacyController() {
 
     override fun onActivityResumed(activity: Activity) {
         super.onActivityResumed(activity)
-        accountsPreference?.summary = accountSummary(activity)
+        accountPreference?.summary = accountSummary(activity)
     }
 
     private fun accountSummary(context: Context): String {
-        val accounts = connectionsManager.discord.getAccounts()
-        return when {
-            accounts.isEmpty() -> context.getString(MR.strings.discord_rpc_not_connected)
-            accounts.size == 1 -> accounts.first().username
-            else -> context.getString(MR.strings.discord_rpc_accounts_connected, accounts.size)
-        }
+        return connectionsManager.discord.getAccount()?.username
+            ?: context.getString(MR.strings.discord_rpc_not_connected)
     }
 }

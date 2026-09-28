@@ -5,14 +5,8 @@ import android.graphics.Color
 import co.touchlab.kermit.Logger
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Request
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import yokai.i18n.MR
@@ -21,125 +15,64 @@ class Discord(id: Long) : ConnectionsService(id) {
 
     private val json = Injekt.get<Json>()
 
+    // Accounts saved by older builds still carry fields that no longer exist (authMethod, isActive).
+    private val accountJson = Json(json) { ignoreUnknownKeys = true }
+
     override fun nameRes() = MR.strings.connections_discord
 
     override fun getLogo() = R.drawable.ic_discord_24dp
 
     override fun getLogoColor() = Color.rgb(88, 101, 242)
 
+    /** Removes the saved account and stops Rich Presence. */
     override fun logout() {
         super.logout()
-        connectionsPreferences.connectionsToken(this).delete()
+        connectionsPreferences.discordAccounts().delete()
+        DiscordRPCService.stop(Injekt.get<Application>())
     }
 
     override suspend fun login(username: String, password: String) {
-        // Not needed, Discord RPC authenticates via an account token instead
+        // Not needed, Discord RPC signs in through the Social SDK instead
     }
 
     /**
-     * Validates [token] against the Discord API and returns the associated account profile, or
-     * null if the token is invalid or the request fails. Only one account can be active at a
-     * time, so the newly added account always becomes the active one.
+     * The saved account, or null when logged out. Older builds could save several; the last one
+     * saved is used.
      */
-    suspend fun fetchProfile(token: String): DiscordAccount? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url("https://discord.com/api/v10/users/@me")
-                .addHeader("Authorization", token)
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string() ?: return@withContext null
-                val user = json.parseToJsonElement(body).jsonObject
-                val id = user["id"]?.jsonPrimitive?.contentOrNull ?: return@withContext null
-                val username = user["username"]?.jsonPrimitive?.contentOrNull ?: return@withContext null
-                val avatar = user["avatar"]?.jsonPrimitive?.contentOrNull
-                DiscordAccount(
-                    id = id,
-                    username = username,
-                    avatarUrl = avatar?.let { "https://cdn.discordapp.com/avatars/$id/$it.png" },
-                    token = token,
-                    isActive = true,
-                )
-            }
+    fun getAccount(): DiscordAccount? {
+        val accountsJson = connectionsPreferences.discordAccounts().get()
+        if (accountsJson.isBlank()) return null
+        return try {
+            accountJson.decodeFromString<List<DiscordAccount>>(accountsJson).lastOrNull()
         } catch (e: Exception) {
-            Logger.e(e) { "Failed to fetch Discord profile" }
             null
         }
     }
 
-    fun getAccounts(): List<DiscordAccount> {
-        val accountsJson = connectionsPreferences.discordAccounts().get()
-        return try {
-            if (accountsJson.isNotBlank()) {
-                json.decodeFromString<List<DiscordAccount>>(accountsJson)
-            } else {
-                emptyList()
-            }
+    fun saveAccount(account: DiscordAccount) {
+        try {
+            connectionsPreferences.discordAccounts().set(json.encodeToString(listOf(account)))
         } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    fun addAccount(account: DiscordAccount) {
-        val accounts = getAccounts().toMutableList()
-
-        if (account.isActive) {
-            accounts.replaceAll { it.copy(isActive = false) }
-            connectionsPreferences.connectionsToken(this).set(account.token)
-        }
-
-        val index = accounts.indexOfFirst { it.id == account.id }
-        if (index >= 0) {
-            accounts[index] = account
-        } else {
-            accounts.add(account)
-        }
-
-        saveAccounts(accounts)
-    }
-
-    /**
-     * Removes the account, clearing the stored token and stopping the RPC service if it was the
-     * active one - otherwise the stale token would be left behind and RPC would keep failing to
-     * reconnect with credentials that no longer correspond to any saved account.
-     */
-    fun removeAccount(accountId: String) {
-        val accounts = getAccounts().toMutableList()
-        val removed = accounts.find { it.id == accountId }
-        accounts.removeAll { it.id == accountId }
-        saveAccounts(accounts)
-
-        if (removed?.isActive == true) {
-            connectionsPreferences.connectionsToken(this).delete()
-            DiscordRPCService.stop(Injekt.get<Application>())
+            Logger.e(e) { "Failed to save Discord account" }
         }
     }
 
     /**
-     * Applies [transform] to [accountId]'s saved settings and persists the result. Restarts RPC
-     * only when the edited account is the active one - editing an inactive account's settings
-     * shouldn't interrupt whatever's currently running. Used by every per-account settings
-     * screen (activity name/app-icon/incognito, activity type/state template/status/buttons)
-     * so each one only has to describe the fields it actually owns.
+     * Applies [transform] to the saved account's settings, persists the result and restarts RPC
+     * so it picks the change up. Used by the account settings screen so each setting only has to
+     * describe the fields it owns.
      */
-    fun updateAccount(accountId: String, transform: (DiscordAccount) -> DiscordAccount) {
-        val accounts = getAccounts().toMutableList()
-        val index = accounts.indexOfFirst { it.id == accountId }
-        if (index < 0) return
-
-        val updated = transform(accounts[index])
-        accounts[index] = updated
-        saveAccounts(accounts)
-
-        if (updated.isActive) restartRichPresence()
+    fun updateAccount(transform: (DiscordAccount) -> DiscordAccount) {
+        val account = getAccount() ?: return
+        saveAccount(transform(account))
+        restartRichPresence()
     }
 
     /**
      * One-time upgrade path from when the activity name/app-icon/respect-incognito settings
-     * were global instead of per-account: copies the old global values onto every saved account
-     * so nobody's existing setup silently changes, then marks itself done so a per-account
-     * change made afterwards is never overwritten.
+     * were global instead of stored on the account: copies the old global values onto the saved
+     * account so nobody's existing setup silently changes, then marks itself done so a change
+     * made afterwards is never overwritten.
      */
     fun migrateLegacyActivitySettingsIfNeeded() {
         if (connectionsPreferences.discordAccountSettingsMigrated().get()) return
@@ -147,16 +80,13 @@ class Discord(id: Long) : ConnectionsService(id) {
         val legacyName = connectionsPreferences.discordCustomActivityName().get()
         val legacyShowAppIcon = connectionsPreferences.discordShowAppIcon().get()
         val legacyRespectIncognito = connectionsPreferences.discordRespectIncognito().get()
-        val accounts = getAccounts()
-        if (accounts.isNotEmpty()) {
-            saveAccounts(
-                accounts.map {
-                    it.copy(
-                        customActivityName = legacyName,
-                        showAppIcon = legacyShowAppIcon,
-                        respectIncognito = legacyRespectIncognito,
-                    )
-                },
+        getAccount()?.let {
+            saveAccount(
+                it.copy(
+                    customActivityName = legacyName,
+                    showAppIcon = legacyShowAppIcon,
+                    respectIncognito = legacyRespectIncognito,
+                ),
             )
         }
 
@@ -164,20 +94,11 @@ class Discord(id: Long) : ConnectionsService(id) {
     }
 
     /**
-     * Restarts the RPC service so it picks up the newly active account's token. No-ops when
-     * Rich Presence is currently disabled or no token is set - handled inside
+     * Restarts the RPC connection so it picks up the current account's token. No-ops when Rich
+     * Presence is currently disabled or no account is saved - handled inside
      * [DiscordRPCService.restart] itself.
      */
     fun restartRichPresence() {
         DiscordRPCService.restart(Injekt.get<Application>())
-    }
-
-    private fun saveAccounts(accounts: List<DiscordAccount>) {
-        try {
-            val accountsJson = json.encodeToString(accounts)
-            connectionsPreferences.discordAccounts().set(accountsJson)
-        } catch (e: Exception) {
-            Logger.e(e) { "Failed to save Discord accounts" }
-        }
     }
 }
