@@ -290,7 +290,6 @@ object DiscordRPCService {
                         state = state,
                         startTimestamp = since,
                         largeImage = cover,
-                        largeText = title,
                         smallImage = smallImage,
                         smallText = smallImage?.let { appName },
                         button1Label = buttons.getOrNull(0)?.label,
@@ -318,7 +317,6 @@ object DiscordRPCService {
                         assets = largeImage?.let {
                             Activity.Assets(
                                 largeImage = it,
-                                largeText = title,
                                 smallImage = smallImage,
                                 smallText = smallImage?.let { appName },
                             )
