@@ -677,7 +677,6 @@
     <!-- Connections -->
     <string name="connections">Connections</string>
     <string name="connections_discord" translatable="false">Discord</string>
-    <string name="discord_rpc_notification_content">Rich Presence is running</string>
     <string name="discord_rpc_enable">Enable Discord Rich Presence</string>
     <string name="discord_rpc_enable_summary">Show what you\'re reading as your Discord status while in the reader</string>
     <string name="discord_rpc_connect_account">Discord account</string>
