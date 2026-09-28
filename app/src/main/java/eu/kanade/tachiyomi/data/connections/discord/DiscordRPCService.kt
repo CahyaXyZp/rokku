@@ -1,20 +1,13 @@
 // Adapted from Komikku (originally from Animiru) for Rokku
 package eu.kanade.tachiyomi.data.connections.discord
 
-import android.app.Notification
-import android.app.Service
 import android.content.Context
-import android.content.Intent
-import android.os.IBinder
 import co.touchlab.kermit.Logger
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
-import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.isIncognitoModeForSource
 import eu.kanade.tachiyomi.util.system.launchIO
-import eu.kanade.tachiyomi.util.system.notificationBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,13 +16,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Foreground service that keeps Discord Rich Presence updated while the user is reading.
+ * Keeps Discord Rich Presence updated while the user is reading. Runs inside the app process
+ * without a foreground service (and so without a notification): Android may end the connection
+ * once the app has been in the background for a while.
  * Entirely optional: [start] no-ops unless the user has enabled it in settings, has an active
  * account, and (when that account's "Respect Incognito Mode" is on) isn't reading a source
  * under Incognito Mode (global or per-extension) - and stopping it (or disabling the setting)
@@ -43,63 +37,33 @@ import yokai.util.lang.getString
  *
  * Doesn't stop the instant reading pauses either: see [scheduleStop]/[resumeReading].
  */
-class DiscordRPCService : Service() {
+object DiscordRPCService {
 
-    private val connectionsManager: ConnectionsManager by injectLazy()
-    private val connectionsPreferences: ConnectionsPreferences by injectLazy()
+    @Volatile
+    private var rpc: DiscordRPC? = null
 
-    override fun onCreate() {
-        super.onCreate()
-        Logger.i { "Starting Discord RPC service" }
+    @Volatile
+    private var usingSdk = false
 
-        val account = connectionsManager.discord.getAccounts().find { it.isActive }
-        val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-        if (account == null || token.isBlank()) {
-            Logger.w { "Discord RPC disabled due to missing account/token" }
-            connectionsPreferences.enableDiscordRPC().set(false)
-            stopSelf()
-            return
-        }
+    private var since = 0L
 
-        startForeground(Notifications.ID_DISCORD_RPC, notification())
-        connectUsing(account, token)
-    }
+    // Fixed grace period - see scheduleStop()/resumeReading().
+    private const val STOP_DEBOUNCE_MS = 5 * 60 * 1000L
 
-    override fun onDestroy() {
-        disconnect()
-        super.onDestroy()
-    }
+    private const val MAX_FIELD_LENGTH = 128
 
-    override fun onBind(intent: Intent): IBinder? = null
+    // Outlives any single reading session, since the whole point of scheduleStop() is for the
+    // delayed stop to keep counting down across the reader activity's
+    // onPause/onResume/onDestroy, not just within one of them.
+    private val debounceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var pendingStopJob: Job? = null
+    private var pendingStopMangaId: Long? = null
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_RESTART -> restartRPC()
+    private fun isConnected() = rpc != null || usingSdk
 
-            ACTION_STOP -> {
-                Logger.i { "Stopping Discord RPC service" }
-                stopSelf()
-                return START_NOT_STICKY
-            }
-        }
-        return START_STICKY
-    }
-
-    private fun restartRPC() {
-        disconnect()
-
-        val account = connectionsManager.discord.getAccounts().find { it.isActive }
-        val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-        if (account == null || token.isBlank()) {
-            Logger.w { "Discord RPC restart failed due to missing account/token" }
-            stopSelf()
-            return
-        }
-
-        connectUsing(account, token)
-    }
-
+    @Synchronized
     private fun connectUsing(account: DiscordAccount, token: String) {
+        Logger.i { "Starting Discord RPC" }
         when (account.authMethod) {
             DiscordAuthMethod.SDK -> {
                 usingSdk = true
@@ -116,6 +80,7 @@ class DiscordRPCService : Service() {
         }
     }
 
+    @Synchronized
     private fun disconnect() {
         if (usingSdk) {
             DiscordRpcManager.disconnect()
@@ -126,284 +91,243 @@ class DiscordRPCService : Service() {
         usingSdk = false
     }
 
-    private fun notification(): Notification {
-        return notificationBuilder(Notifications.CHANNEL_DISCORD_RPC) {
-            setSmallIcon(R.drawable.ic_discord_24dp)
-            setContentTitle(getString(MR.strings.connections_discord))
-            setContentText(getString(MR.strings.discord_rpc_notification_content))
-            setOngoing(true)
-            setAutoCancel(false)
-            setUsesChronometer(true)
-        }.build()
+    private fun respectsIncognito(
+        account: DiscordAccount,
+        sourceId: Long?,
+        preferences: PreferencesHelper,
+        extensionManager: ExtensionManager,
+    ): Boolean {
+        if (!account.respectIncognito) return false
+        return isIncognitoModeForSource(sourceId, preferences, extensionManager)
     }
 
-    companion object {
-        private var rpc: DiscordRPC? = null
-        private var usingSdk = false
-        private var since = 0L
-
-        private const val ACTION_RESTART = "eu.kanade.tachiyomi.DISCORD_RPC_RESTART"
-        private const val ACTION_STOP = "eu.kanade.tachiyomi.DISCORD_RPC_STOP"
-
-        // Fixed grace period - see scheduleStop()/resumeReading().
-        private const val STOP_DEBOUNCE_MS = 5 * 60 * 1000L
-
-        private const val MAX_FIELD_LENGTH = 128
-
-        // Outlives any single Service instance (companion, like rpc/usingSdk above), since the
-        // whole point of scheduleStop() is for the delayed stop to keep counting down across
-        // the reader activity's onPause/onResume/onDestroy, not just within one of them.
-        private val debounceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        private var pendingStopJob: Job? = null
-        private var pendingStopMangaId: Long? = null
-
-        private fun isConnected() = rpc != null || usingSdk
-
-        private fun respectsIncognito(
-            account: DiscordAccount,
-            sourceId: Long?,
-            preferences: PreferencesHelper,
-            extensionManager: ExtensionManager,
-        ): Boolean {
-            if (!account.respectIncognito) return false
-            return isIncognitoModeForSource(sourceId, preferences, extensionManager)
+    /**
+     * Resolves both of [account]'s configured buttons, substituting [TEMPLATE_CHAPTER_URL]
+     * with [chapterUrl]. A button is dropped entirely if it isn't switched on
+     * (button1Enabled/button2Enabled), or if its label or resolved url end up blank
+     * (including a `{chapter_url}` placeholder left unresolved because [chapterUrl] is
+     * null) - Discord rejects buttons with an empty label/url.
+     */
+    private fun resolveButtons(account: DiscordAccount, chapterUrl: String?): List<Activity.Button> {
+        fun resolve(enabled: Boolean, label: String, url: String): Activity.Button? {
+            if (!enabled) return null
+            val resolvedUrl = url.replace(TEMPLATE_CHAPTER_URL, chapterUrl.orEmpty())
+            if (label.isBlank() || resolvedUrl.isBlank()) return null
+            return Activity.Button(label, resolvedUrl)
         }
+        return listOfNotNull(
+            resolve(account.button1Enabled, account.button1Label, account.button1Url),
+            resolve(account.button2Enabled, account.button2Label, account.button2Url),
+        )
+    }
 
-        /**
-         * Resolves both of [account]'s configured buttons, substituting [TEMPLATE_CHAPTER_URL]
-         * with [chapterUrl]. A button is dropped entirely if it isn't switched on
-         * (button1Enabled/button2Enabled), or if its label or resolved url end up blank
-         * (including a `{chapter_url}` placeholder left unresolved because [chapterUrl] is
-         * null) - Discord rejects buttons with an empty label/url.
-         */
-        private fun resolveButtons(account: DiscordAccount, chapterUrl: String?): List<Activity.Button> {
-            fun resolve(enabled: Boolean, label: String, url: String): Activity.Button? {
-                if (!enabled) return null
-                val resolvedUrl = url.replace(TEMPLATE_CHAPTER_URL, chapterUrl.orEmpty())
-                if (label.isBlank() || resolvedUrl.isBlank()) return null
-                return Activity.Button(label, resolvedUrl)
-            }
-            return listOfNotNull(
-                resolve(account.button1Enabled, account.button1Label, account.button1Url),
-                resolve(account.button2Enabled, account.button2Label, account.button2Url),
-            )
+    private fun sdkOnlineStatus(status: String) = when (status) {
+        DiscordOnlineStatus.IDLE -> DiscordRpcManager.OnlineStatus.Idle
+        DiscordOnlineStatus.DND -> DiscordRpcManager.OnlineStatus.DoNotDisturb
+        else -> DiscordRpcManager.OnlineStatus.Online
+    }
+
+    // Discord rejects blank, 1-character, and over-128-character details/state.
+    private fun sanitizeField(value: String): String? {
+        val trimmed = value.trim()
+        return when {
+            trimmed.isEmpty() -> null
+            trimmed.length < 2 -> "$trimmed "
+            else -> trimmed.take(MAX_FIELD_LENGTH)
         }
+    }
 
-        private fun sdkOnlineStatus(status: String) = when (status) {
-            DiscordOnlineStatus.IDLE -> DiscordRpcManager.OnlineStatus.Idle
-            DiscordOnlineStatus.DND -> DiscordRpcManager.OnlineStatus.DoNotDisturb
-            else -> DiscordRpcManager.OnlineStatus.Online
+    // Local covers (file paths, content:// URIs) can't be rendered by Discord.
+    private fun remoteImageUrl(url: String?): String? =
+        url?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+
+    fun start(
+        context: Context,
+        sourceId: Long? = null,
+        connectionsManager: ConnectionsManager = Injekt.get(),
+        connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+        preferences: PreferencesHelper = Injekt.get(),
+        extensionManager: ExtensionManager = Injekt.get(),
+    ) {
+        if (!connectionsPreferences.enableDiscordRPC().get()) return
+
+        val account = connectionsManager.discord.getAccounts().find { it.isActive }
+        val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
+        if (account == null || token.isBlank()) {
+            Logger.w { "Discord RPC not started due to missing account/token" }
+            connectionsPreferences.enableDiscordRPC().set(false)
+            return
         }
+        if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
 
-        // Discord rejects blank, 1-character, and over-128-character details/state.
-        private fun sanitizeField(value: String): String? {
-            val trimmed = value.trim()
-            return when {
-                trimmed.isEmpty() -> null
-                trimmed.length < 2 -> "$trimmed "
-                else -> trimmed.take(MAX_FIELD_LENGTH)
-            }
+        // Always restarts the elapsed-time counter, even when the connection is already up:
+        // scheduleStop()/resumeReading() can leave it running across a switch to a different
+        // manga, and that switch should still restart the timestamp.
+        since = System.currentTimeMillis()
+        if (!isConnected()) {
+            connectUsing(account, token)
         }
+    }
 
-        // Local covers (file paths, content:// URIs) can't be rendered by Discord.
-        private fun remoteImageUrl(url: String?): String? =
-            url?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+    fun stop(context: Context) {
+        Logger.i { "Stopping Discord RPC" }
+        disconnect()
+    }
 
-        fun start(
-            context: Context,
-            sourceId: Long? = null,
-            connectionsManager: ConnectionsManager = Injekt.get(),
-            connectionsPreferences: ConnectionsPreferences = Injekt.get(),
-            preferences: PreferencesHelper = Injekt.get(),
-            extensionManager: ExtensionManager = Injekt.get(),
-        ) {
-            if (!connectionsPreferences.enableDiscordRPC().get()) return
-
-            val account = connectionsManager.discord.getAccounts().find { it.isActive }
-            val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            if (account == null || token.isBlank()) {
-                Logger.w { "Discord RPC not started due to missing account/token" }
-                connectionsPreferences.enableDiscordRPC().set(false)
-                return
-            }
-            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
-
-            // Always restarts the elapsed-time counter - this used to sit inside the
-            // `!isConnected()` check below, but scheduleStop()/resumeReading() can now leave
-            // the service running (isConnected() == true) across a switch to a different
-            // manga, and that switch should still restart the timestamp.
-            since = System.currentTimeMillis()
-            if (!isConnected()) {
-                context.startForegroundService(Intent(context, DiscordRPCService::class.java))
-            }
-        }
-
-        fun stop(context: Context) {
-            try {
-                context.startService(
-                    Intent(context, DiscordRPCService::class.java).apply { action = ACTION_STOP },
-                )
-            } catch (e: Exception) {
-                Logger.e(e) { "Failed to stop Discord RPC service" }
-            }
-        }
-
-        /**
-         * Call from the reader's onPause() instead of [stop] directly. Doesn't stop anything
-         * immediately - schedules [stop] to run after [STOP_DEBOUNCE_MS], tagged with
-         * [mangaId], so a brief app-switch or screen-off doesn't drop the connection or reset
-         * the Rich Presence timestamp. See [resumeReading] for the other half of this.
-         */
-        fun scheduleStop(context: Context, mangaId: Long?) {
-            pendingStopJob?.cancel()
-            pendingStopMangaId = mangaId
-            pendingStopJob = debounceScope.launch {
-                delay(STOP_DEBOUNCE_MS)
-                pendingStopMangaId = null
-                stop(context)
-            }
-        }
-
-        /**
-         * Call from the reader's onResume(), instead of unconditionally calling [start]:
-         * ```
-         * if (!DiscordRPCService.resumeReading(manga.id)) {
-         *     DiscordRPCService.start(context, sourceId = manga.source)
-         * }
-         * ```
-         * Returns true when [mangaId] matches a pending [scheduleStop] call from the same
-         * manga - meaning the grace period already covered this resume, so the existing
-         * connection and timestamp are left completely untouched and the caller should skip
-         * [start]. Otherwise (different manga, or nothing was pending) cancels any stale
-         * pending stop and returns false, so the caller proceeds with [start] as normal -
-         * which still won't actually reconnect if the service never stopped, but will restart
-         * the timestamp for the new manga.
-         */
-        fun resumeReading(mangaId: Long?): Boolean {
-            val sameMangaPending = mangaId != null && mangaId == pendingStopMangaId && pendingStopJob != null
-            pendingStopJob?.cancel()
-            pendingStopJob = null
+    /**
+     * Call from the reader's onPause() instead of [stop] directly. Doesn't stop anything
+     * immediately - schedules [stop] to run after [STOP_DEBOUNCE_MS], tagged with
+     * [mangaId], so a brief app-switch or screen-off doesn't drop the connection or reset
+     * the Rich Presence timestamp. See [resumeReading] for the other half of this.
+     */
+    fun scheduleStop(context: Context, mangaId: Long?) {
+        pendingStopJob?.cancel()
+        pendingStopMangaId = mangaId
+        pendingStopJob = debounceScope.launch {
+            delay(STOP_DEBOUNCE_MS)
             pendingStopMangaId = null
-            return sameMangaPending
+            stop(context)
         }
+    }
 
-        fun restart(
-            context: Context,
-            sourceId: Long? = null,
-            connectionsManager: ConnectionsManager = Injekt.get(),
-            connectionsPreferences: ConnectionsPreferences = Injekt.get(),
-            preferences: PreferencesHelper = Injekt.get(),
-            extensionManager: ExtensionManager = Injekt.get(),
-        ) {
-            val account = connectionsManager.discord.getAccounts().find { it.isActive }
-            val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
-            val missingAccount = !connectionsPreferences.enableDiscordRPC().get() ||
-                account == null || token.isBlank()
-            if (missingAccount) {
-                if (account == null || token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
-                return
-            }
-            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
+    /**
+     * Call from the reader's onResume(), instead of unconditionally calling [start]:
+     * ```
+     * if (!DiscordRPCService.resumeReading(manga.id)) {
+     *     DiscordRPCService.start(context, sourceId = manga.source)
+     * }
+     * ```
+     * Returns true when [mangaId] matches a pending [scheduleStop] call from the same
+     * manga - meaning the grace period already covered this resume, so the existing
+     * connection and timestamp are left completely untouched and the caller should skip
+     * [start]. Otherwise (different manga, or nothing was pending) cancels any stale
+     * pending stop and returns false, so the caller proceeds with [start] as normal -
+     * which still won't actually reconnect if the connection never dropped, but will
+     * restart the timestamp for the new manga.
+     */
+    fun resumeReading(mangaId: Long?): Boolean {
+        val sameMangaPending = mangaId != null && mangaId == pendingStopMangaId && pendingStopJob != null
+        pendingStopJob?.cancel()
+        pendingStopJob = null
+        pendingStopMangaId = null
+        return sameMangaPending
+    }
 
-            try {
-                context.startForegroundService(
-                    Intent(context, DiscordRPCService::class.java).apply { action = ACTION_RESTART },
-                )
-            } catch (e: Exception) {
-                Logger.e(e) { "Failed to restart Discord RPC service" }
-            }
+    /**
+     * Drops the current connection and reconnects using the active account, e.g. after the
+     * user switches accounts. No-ops when Rich Presence is disabled.
+     */
+    fun restart(
+        context: Context,
+        sourceId: Long? = null,
+        connectionsManager: ConnectionsManager = Injekt.get(),
+        connectionsPreferences: ConnectionsPreferences = Injekt.get(),
+        preferences: PreferencesHelper = Injekt.get(),
+        extensionManager: ExtensionManager = Injekt.get(),
+    ) {
+        val account = connectionsManager.discord.getAccounts().find { it.isActive }
+        val token = connectionsPreferences.connectionsToken(connectionsManager.discord).get()
+        val missingAccount = !connectionsPreferences.enableDiscordRPC().get() ||
+            account == null || token.isBlank()
+        if (missingAccount) {
+            if (account == null || token.isBlank()) connectionsPreferences.enableDiscordRPC().set(false)
+            return
         }
+        if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
 
-        /**
-         * Updates the Rich Presence using the active account's own settings: activity type,
-         * a state built from its `{chapter}`/`{total}` template, its custom online status, its
-         * two configured buttons (each resolving a `{chapter_url}` placeholder against
-         * [chapterUrl], dropped if still blank after that), and the large/small images as
-         * before. No-ops while [sourceId] is under Incognito Mode (global or per-extension)
-         * and the active account's "Respect Incognito Mode" is on, or if there's no active
-         * account.
-         */
-        fun setReadingActivity(
-            context: Context,
-            title: String,
-            currentChapter: Int,
-            totalChapters: Int,
-            coverUrl: String?,
-            sourceId: Long? = null,
-            chapterUrl: String? = null,
-            connectionsManager: ConnectionsManager = Injekt.get(),
-            preferences: PreferencesHelper = Injekt.get(),
-            extensionManager: ExtensionManager = Injekt.get(),
-        ) {
-            if (!isConnected()) return
-            val account = connectionsManager.discord.getAccounts().find { it.isActive } ?: return
-            if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
-            launchIO {
-                val appName = context.getString(MR.strings.app_name)
-                val showAppIcon = account.showAppIcon
-                val name = account.customActivityName.ifBlank { appName }
-                val details = sanitizeField(title)
-                val state = sanitizeField(
-                    account.activityStateTemplate
-                        .replace(TEMPLATE_CHAPTER, currentChapter.toString())
-                        .replace(TEMPLATE_TOTAL, totalChapters.toString()),
+        disconnect()
+        connectUsing(account, token)
+    }
+
+    /**
+     * Updates the Rich Presence using the active account's own settings: activity type,
+     * a state built from its `{chapter}`/`{total}` template, its custom online status, its
+     * two configured buttons (each resolving a `{chapter_url}` placeholder against
+     * [chapterUrl], dropped if still blank after that), and the large/small images as
+     * before. No-ops while [sourceId] is under Incognito Mode (global or per-extension)
+     * and the active account's "Respect Incognito Mode" is on, or if there's no active
+     * account.
+     */
+    fun setReadingActivity(
+        context: Context,
+        title: String,
+        currentChapter: Int,
+        totalChapters: Int,
+        coverUrl: String?,
+        sourceId: Long? = null,
+        chapterUrl: String? = null,
+        connectionsManager: ConnectionsManager = Injekt.get(),
+        preferences: PreferencesHelper = Injekt.get(),
+        extensionManager: ExtensionManager = Injekt.get(),
+    ) {
+        if (!isConnected()) return
+        val account = connectionsManager.discord.getAccounts().find { it.isActive } ?: return
+        if (respectsIncognito(account, sourceId, preferences, extensionManager)) return
+        launchIO {
+            val appName = context.getString(MR.strings.app_name)
+            val showAppIcon = account.showAppIcon
+            val name = account.customActivityName.ifBlank { appName }
+            val details = sanitizeField(title)
+            val state = sanitizeField(
+                account.activityStateTemplate
+                    .replace(TEMPLATE_CHAPTER, currentChapter.toString())
+                    .replace(TEMPLATE_TOTAL, totalChapters.toString()),
+            )
+            val cover = remoteImageUrl(coverUrl)
+            val buttons = resolveButtons(account, chapterUrl)
+
+            if (usingSdk) {
+                // The native SDK takes image URLs directly rather than the pre-resolved
+                // asset IDs the Gateway-based RPCExternalAsset flow needs - unverified
+                // against a real device/account yet, worth double-checking that Discord
+                // actually renders a bare https cover URL as the large image here.
+                val smallImage = if (cover != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
+                DiscordRpcManager.setOnlineStatus(sdkOnlineStatus(account.onlineStatus))
+                DiscordRpcManager.setActivity(
+                    DiscordNativeActivity(
+                        name = name,
+                        details = details,
+                        state = state,
+                        startTimestamp = since,
+                        largeImage = cover,
+                        largeText = title,
+                        smallImage = smallImage,
+                        smallText = smallImage?.let { appName },
+                        button1Label = buttons.getOrNull(0)?.label,
+                        button1Url = buttons.getOrNull(0)?.url,
+                        button2Label = buttons.getOrNull(1)?.label,
+                        button2Url = buttons.getOrNull(1)?.url,
+                        activityType = account.activityType,
+                    ),
                 )
-                val cover = remoteImageUrl(coverUrl)
-                val buttons = resolveButtons(account, chapterUrl)
-
-                if (usingSdk) {
-                    // The native SDK takes image URLs directly rather than the pre-resolved
-                    // asset IDs the Gateway-based RPCExternalAsset flow needs - unverified
-                    // against a real device/account yet, worth double-checking that Discord
-                    // actually renders a bare https cover URL as the large image here.
-                    val smallImage = if (cover != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
-                    DiscordRpcManager.setOnlineStatus(sdkOnlineStatus(account.onlineStatus))
-                    DiscordRpcManager.setActivity(
-                        DiscordNativeActivity(
-                            name = name,
-                            details = details,
-                            state = state,
-                            startTimestamp = since,
-                            largeImage = cover,
-                            largeText = title,
-                            smallImage = smallImage,
-                            smallText = smallImage?.let { appName },
-                            button1Label = buttons.getOrNull(0)?.label,
-                            button1Url = buttons.getOrNull(0)?.url,
-                            button2Label = buttons.getOrNull(1)?.label,
-                            button2Url = buttons.getOrNull(1)?.url,
-                            activityType = account.activityType,
-                        ),
-                    )
+            } else {
+                val activeRpc = rpc ?: return@launchIO
+                val largeImage = cover?.let { activeRpc.resolveAsset(it) }
+                val smallImage = if (largeImage != null && showAppIcon) {
+                    activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
                 } else {
-                    val activeRpc = rpc ?: return@launchIO
-                    val largeImage = cover?.let { activeRpc.resolveAsset(it) }
-                    val smallImage = if (largeImage != null && showAppIcon) {
-                        activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
-                    } else {
-                        null
-                    }
-                    activeRpc.updateRPC(
-                        activity = Activity(
-                            name = name,
-                            details = details,
-                            state = state,
-                            type = account.activityType,
-                            timestamps = Activity.Timestamps(start = since),
-                            assets = largeImage?.let {
-                                Activity.Assets(
-                                    largeImage = it,
-                                    largeText = title,
-                                    smallImage = smallImage,
-                                    smallText = smallImage?.let { appName },
-                                )
-                            },
-                            buttons = buttons.ifEmpty { null },
-                        ),
-                        since = since,
-                        status = account.onlineStatus,
-                    )
+                    null
                 }
+                activeRpc.updateRPC(
+                    activity = Activity(
+                        name = name,
+                        details = details,
+                        state = state,
+                        type = account.activityType,
+                        timestamps = Activity.Timestamps(start = since),
+                        assets = largeImage?.let {
+                            Activity.Assets(
+                                largeImage = it,
+                                largeText = title,
+                                smallImage = smallImage,
+                                smallText = smallImage?.let { appName },
+                            )
+                        },
+                        buttons = buttons.ifEmpty { null },
+                    ),
+                    since = since,
+                    status = account.onlineStatus,
+                )
             }
         }
     }
