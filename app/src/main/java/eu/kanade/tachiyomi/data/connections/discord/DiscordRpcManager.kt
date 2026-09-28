@@ -36,15 +36,13 @@ data class DiscordUser(
 /**
  * Drives Discord Rich Presence via the official Social SDK, over JNI to [discord_bridge.cpp].
  *
- * Single account at a time for now, matching [DiscordRPCService]'s current scope - this
- * authenticates/connects for whichever one account is active. Multi-account (one native
- * connection per account) is a planned follow-up; the SDK itself supports it; this class and the
- * bridge don't yet.
+ * Handles a single account, matching [DiscordRPCService]: it authenticates and connects for the
+ * one saved account.
  *
  * Flow: [init] loads the native lib and starts the callback pump once -> [authorize] opens the
  * Discord app for OAuth PKCE consent and exchanges the resulting code for an access token ->
  * [reconnectWithToken] (re)connects the native client with an already-known token, e.g. when
- * switching back to a previously authorized account.
+ * the app starts again after a previous login.
  */
 object DiscordRpcManager {
     private const val TAG = "DiscordRpcManager"
@@ -264,8 +262,7 @@ object DiscordRpcManager {
 
     /**
      * Fetches the Discord user profile for [token] (an OAuth access token, sent as a Bearer
-     * token - not the same header format [Discord.fetchProfile] uses for Token Login).
-     * Performs blocking network I/O; call off the main thread.
+     * token). Performs blocking network I/O; call off the main thread.
      */
     fun fetchCurrentUser(token: String): DiscordUser? {
         return try {
@@ -306,8 +303,8 @@ object DiscordRpcManager {
     }
 
     /**
-     * (Re)connects the native client using an already-known access token - used when switching
-     * back to (or starting the RPC service for) an SDK account that was authorized before.
+     * (Re)connects the native client using an already-known access token - used when starting
+     * the RPC service with the saved account.
      */
     fun reconnectWithToken(token: String) {
         if (!initialized.get()) return
