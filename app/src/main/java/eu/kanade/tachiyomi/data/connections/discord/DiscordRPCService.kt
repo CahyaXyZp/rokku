@@ -148,6 +148,8 @@ class DiscordRPCService : Service() {
         // Fixed grace period - see scheduleStop()/resumeReading().
         private const val STOP_DEBOUNCE_MS = 5 * 60 * 1000L
 
+        private const val MAX_FIELD_LENGTH = 128
+
         // Outlives any single Service instance (companion, like rpc/usingSdk above), since the
         // whole point of scheduleStop() is for the delayed stop to keep counting down across
         // the reader activity's onPause/onResume/onDestroy, not just within one of them.
@@ -191,6 +193,16 @@ class DiscordRPCService : Service() {
             DiscordOnlineStatus.IDLE -> DiscordRpcManager.OnlineStatus.Idle
             DiscordOnlineStatus.DND -> DiscordRpcManager.OnlineStatus.DoNotDisturb
             else -> DiscordRpcManager.OnlineStatus.Online
+        }
+
+        // Discord rejects blank, 1-character, and over-128-character details/state.
+        private fun sanitizeField(value: String): String? {
+            val trimmed = value.trim()
+            return when {
+                trimmed.isEmpty() -> null
+                trimmed.length < 2 -> "$trimmed "
+                else -> trimmed.take(MAX_FIELD_LENGTH)
+            }
         }
 
         fun start(
@@ -326,9 +338,12 @@ class DiscordRPCService : Service() {
                 val appName = context.getString(MR.strings.app_name)
                 val showAppIcon = account.showAppIcon
                 val name = account.customActivityName.ifBlank { appName }
-                val state = account.activityStateTemplate
-                    .replace(TEMPLATE_CHAPTER, currentChapter.toString())
-                    .replace(TEMPLATE_TOTAL, totalChapters.toString())
+                val details = sanitizeField(title)
+                val state = sanitizeField(
+                    account.activityStateTemplate
+                        .replace(TEMPLATE_CHAPTER, currentChapter.toString())
+                        .replace(TEMPLATE_TOTAL, totalChapters.toString()),
+                )
                 val buttons = resolveButtons(account, chapterUrl)
 
                 if (usingSdk) {
@@ -341,7 +356,7 @@ class DiscordRPCService : Service() {
                     DiscordRpcManager.setActivity(
                         DiscordNativeActivity(
                             name = name,
-                            details = title,
+                            details = details,
                             state = state,
                             startTimestamp = since,
                             largeImage = coverUrl,
@@ -366,7 +381,7 @@ class DiscordRPCService : Service() {
                     activeRpc.updateRPC(
                         activity = Activity(
                             name = name,
-                            details = title,
+                            details = details,
                             state = state,
                             type = account.activityType,
                             timestamps = Activity.Timestamps(start = since),
