@@ -205,6 +205,10 @@ class DiscordRPCService : Service() {
             }
         }
 
+        // Local covers (file paths, content:// URIs) can't be rendered by Discord.
+        private fun remoteImageUrl(url: String?): String? =
+            url?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+
         fun start(
             context: Context,
             sourceId: Long? = null,
@@ -344,6 +348,7 @@ class DiscordRPCService : Service() {
                         .replace(TEMPLATE_CHAPTER, currentChapter.toString())
                         .replace(TEMPLATE_TOTAL, totalChapters.toString()),
                 )
+                val cover = remoteImageUrl(coverUrl)
                 val buttons = resolveButtons(account, chapterUrl)
 
                 if (usingSdk) {
@@ -351,7 +356,7 @@ class DiscordRPCService : Service() {
                     // asset IDs the Gateway-based RPCExternalAsset flow needs - unverified
                     // against a real device/account yet, worth double-checking that Discord
                     // actually renders a bare https cover URL as the large image here.
-                    val smallImage = if (coverUrl != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
+                    val smallImage = if (cover != null && showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
                     DiscordRpcManager.setOnlineStatus(sdkOnlineStatus(account.onlineStatus))
                     DiscordRpcManager.setActivity(
                         DiscordNativeActivity(
@@ -359,7 +364,7 @@ class DiscordRPCService : Service() {
                             details = details,
                             state = state,
                             startTimestamp = since,
-                            largeImage = coverUrl,
+                            largeImage = cover,
                             largeText = title,
                             smallImage = smallImage,
                             smallText = smallImage?.let { appName },
@@ -372,7 +377,7 @@ class DiscordRPCService : Service() {
                     )
                 } else {
                     val activeRpc = rpc ?: return@launchIO
-                    val largeImage = coverUrl?.let { activeRpc.resolveAsset(it) }
+                    val largeImage = cover?.let { activeRpc.resolveAsset(it) }
                     val smallImage = if (largeImage != null && showAppIcon) {
                         activeRpc.resolveAsset(RICH_PRESENCE_APP_ICON_URL)
                     } else {
