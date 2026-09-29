@@ -65,9 +65,9 @@ object DiscordRPCService {
     }
 
     @Synchronized
-    private fun disconnect() {
+    private fun disconnect(restoreStatus: Boolean = false) {
         if (connected) {
-            DiscordRpcManager.disconnect()
+            DiscordRpcManager.disconnect(restoreStatus)
         }
         connected = false
     }
@@ -186,7 +186,7 @@ object DiscordRPCService {
 
     fun stop(context: Context) {
         Logger.i { "Stopping Discord RPC" }
-        disconnect()
+        disconnect(restoreStatus = true)
     }
 
     /**
