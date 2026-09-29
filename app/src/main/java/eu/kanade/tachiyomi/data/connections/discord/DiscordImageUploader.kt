@@ -106,8 +106,11 @@ internal object DiscordImageUploader {
         bytes.size >= 12 &&
             String(bytes, 0, 4, Charsets.ISO_8859_1) == "RIFF" &&
             String(bytes, 8, 4, Charsets.ISO_8859_1) == "WEBP" -> "webp"
+
         bytes.size >= 4 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() -> "png"
+
         bytes.size >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "jpeg"
+
         else -> "png"
     }
 }
