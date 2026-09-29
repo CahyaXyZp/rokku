@@ -43,6 +43,8 @@ class ConnectionsPreferences(
     // under Incognito Mode, this just makes that toggleable instead of forced.
     fun discordRespectIncognito() = preferenceStore.getBoolean("pref_discord_respect_incognito", true)
 
+    fun discordUploadLocalCovers() = preferenceStore.getBoolean("pref_discord_upload_local_covers", false)
+
     companion object {
         fun connectionsUsername(syncId: Long) = Preference.privateKey("pref_connections_username_$syncId")
 
