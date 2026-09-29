@@ -674,31 +674,24 @@
     <string name="use_suggested_date">Use suggested date</string>
     <string name="failed_to_update_">Failed to update %1$s</string>
 
-    <!-- Connections -->
+<!-- Connections -->
     <string name="connections">Connections</string>
     <string name="connections_discord" translatable="false">Discord</string>
     <string name="discord_rpc_enable">Enable Discord Rich Presence</string>
     <string name="discord_rpc_enable_summary">Show what you\'re reading as your Discord status while in the reader</string>
     <string name="discord_rpc_connect_account">Discord account</string>
     <string name="discord_rpc_not_connected">Not connected</string>
-    <string name="discord_rpc_accounts_connected">%1$d accounts connected</string>
     <string name="discord_rpc_activity_name">Custom activity name</string>
     <string name="discord_rpc_activity_name_summary">Shown right after \"Watching\". Leave blank to use the app name</string>
     <string name="discord_rpc_show_app_icon">Show app icon</string>
     <string name="discord_rpc_show_app_icon_summary">Display the app logo on your Rich Presence status</string>
     <string name="discord_rpc_respect_incognito">Respect Incognito Mode</string>
     <string name="discord_rpc_respect_incognito_summary">Don\'t show Rich Presence while reading a series or source under Incognito Mode</string>
-    <string name="discord_rpc_accounts">Discord accounts</string>
-    <string name="discord_rpc_add_account">Add account</string>
-    <string name="discord_rpc_add_account_choose_method">How would you like to add an account?</string>
     <string name="discord_rpc_login_via_discord">Log in with Discord</string>
-    <string name="discord_rpc_login_via_token">Log in with token (Advanced)</string>
-    <string name="discord_rpc_add_account_dialog_message">Paste your Discord account token below</string>
-    <string name="discord_rpc_no_accounts">No accounts added yet</string>
     <string name="discord_rpc_remove_account_confirm">Remove this account?</string>
-    <string name="discord_rpc_active_account">Active</string>
     <string name="discord_rpc_account_added">Account added</string>
-    <string name="discord_rpc_account_add_failed">Failed to add account. Check the token and try again</string>
+    <string name="discord_rpc_account_add_failed">Failed to log in with Discord. Try again</string>
+    <string name="discord_rpc_logout">Log out</string>
     <string name="discord_rpc_account_removed">Account removed</string>
     <string name="discord_rpc_activity_type">Activity type</string>
     <string name="discord_rpc_activity_type_summary">How this shows up on Discord, e.g. "Watching Chapter 5"</string>
@@ -718,7 +711,7 @@
     <string name="discord_rpc_section_privacy">Privacy</string>
     <string name="discord_rpc_upload_local_covers">Upload local covers</string>
     <string name="discord_rpc_upload_local_covers_summary">Uploads custom and local covers to a public image host (uguu.se, catbox.moe) so Discord can show them. Anyone with the link can view the image. Skipped for extensions flagged as NSFW, but other sources may still host adult content.</string>
-
+    
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
     <string name="source_migration">Source migration</string>
