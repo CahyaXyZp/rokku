@@ -24,6 +24,7 @@ import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /** A Discord user profile, fetched from the API right after a successful OAuth authorization. */
 data class DiscordUser(
@@ -58,6 +59,9 @@ object DiscordRpcManager {
     private const val TOKEN_URL = "https://discord.com/api/v10/oauth2/token"
     private const val USER_URL = "https://discord.com/api/v10/users/@me"
 
+    // Time given to the native client to send the restored online status before it disconnects.
+    private const val STATUS_RESTORE_GRACE_MS = 1_000L
+
     enum class Status { Disconnected, Authorizing, Connected }
 
     enum class OnlineStatus(val value: Int) {
@@ -72,6 +76,18 @@ object DiscordRpcManager {
     private var readyInternal = false
 
     private var callbackJob: Job? = null
+
+    // Bumped on every reconnect so a pending delayed disconnect can tell it has been superseded.
+    private val connectionEpoch = AtomicInteger()
+    private val restoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // The user's own status, captured just before the first override so it can be put back when
+    // presence stops. Null when it couldn't be read, in which case Online is restored.
+    @Volatile
+    private var onlineStatusOverridden = false
+
+    @Volatile
+    private var previousOnlineStatus: Int? = null
 
     private val _connectionStatus = MutableStateFlow(Status.Disconnected)
     val connectionStatus: StateFlow<Status> = _connectionStatus
@@ -113,6 +129,7 @@ object DiscordRpcManager {
         button2Url: String?,
     )
     private external fun nativeSetOnlineStatus(statusType: Int)
+    private external fun nativeGetOnlineStatus(): Int
     private external fun nativeClear()
     private external fun nativeRunCallbacks()
     private external fun nativeDisconnect()
@@ -308,6 +325,7 @@ object DiscordRpcManager {
      */
     fun reconnectWithToken(token: String) {
         if (!initialized.get()) return
+        connectionEpoch.incrementAndGet()
         _connectionStatus.value = Status.Authorizing
         nativeSetTokenAndConnect(token)
         Handler(Looper.getMainLooper()).post { nativeConnect() }
@@ -328,6 +346,11 @@ object DiscordRpcManager {
 
     fun setOnlineStatus(status: OnlineStatus) {
         if (!readyInternal) return
+        if (!onlineStatusOverridden) {
+            val current = nativeGetOnlineStatus()
+            previousOnlineStatus = current.takeIf { value -> OnlineStatus.entries.any { it.value == value } }
+            onlineStatusOverridden = true
+        }
         nativeSetOnlineStatus(status.value)
     }
 
@@ -336,9 +359,32 @@ object DiscordRpcManager {
         nativeClear()
     }
 
-    /** Drops the native connection. Safe to call [reconnectWithToken] again afterwards. */
-    fun disconnect() {
+    /**
+     * Drops the native connection. Safe to call [reconnectWithToken] again afterwards.
+     *
+     * With [restoreStatus], the online status the user had before [setOnlineStatus] first changed
+     * it (Online when unknown) is put back before disconnecting. Leave it off when reconnecting
+     * right away, as the status is applied again afterwards.
+     */
+    fun disconnect(restoreStatus: Boolean = false) {
         if (!initialized.get()) return
+        if (restoreStatus && readyInternal && onlineStatusOverridden) {
+            val target = previousOnlineStatus ?: OnlineStatus.Online.value
+            onlineStatusOverridden = false
+            previousOnlineStatus = null
+            nativeSetOnlineStatus(target)
+
+            val epoch = connectionEpoch.get()
+            restoreScope.launch {
+                delay(STATUS_RESTORE_GRACE_MS)
+                if (connectionEpoch.get() == epoch) finishDisconnect()
+            }
+            return
+        }
+        finishDisconnect()
+    }
+
+    private fun finishDisconnect() {
         _connectionStatus.value = Status.Disconnected
         readyInternal = false
         nativeDisconnect()
@@ -348,6 +394,8 @@ object DiscordRpcManager {
     fun destroy() {
         if (!initialized.compareAndSet(true, false)) return
         readyInternal = false
+        onlineStatusOverridden = false
+        previousOnlineStatus = null
         _connectionStatus.value = Status.Disconnected
         callbackJob?.cancel()
         callbackJob = null
