@@ -33,11 +33,21 @@ class TrackerPreference @JvmOverloads constructor(context: Context, attrs: Attri
         logoContainer.setCardBackgroundColor(iconColor)
         val padding = if (Color.alpha(iconColor) == 0) 0 else 4.dpToPx
         holder.findViewById(AR.id.icon).setPadding(padding)
-        checkedIcon.isVisible = !getPersistedString("").isNullOrEmpty()
+        checkedIcon.isVisible = checked ?: !getPersistedString("").isNullOrEmpty()
     }
 
     @ColorInt
     var iconColor: Int = Color.TRANSPARENT
+        set(value) {
+            field = value
+            notifyChanged()
+        }
+
+    /**
+     * Overrides the persisted-value check for the green check mark. Leave null to keep the
+     * default behavior of showing it when the persisted string isn't empty.
+     */
+    var checked: Boolean? = null
         set(value) {
             field = value
             notifyChanged()

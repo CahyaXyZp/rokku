@@ -1,21 +1,17 @@
 package eu.kanade.tachiyomi.ui.setting.controllers
 
 import android.app.Activity
-import android.content.Context
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import eu.kanade.tachiyomi.ui.setting.add
-import eu.kanade.tachiyomi.ui.setting.bindTo
 import eu.kanade.tachiyomi.ui.setting.iconRes
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
-import eu.kanade.tachiyomi.ui.setting.switchPreference
 import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import eu.kanade.tachiyomi.widget.preference.TrackerPreference
 import uy.kohesive.injekt.injectLazy
-import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
 import yokai.util.lang.getString
 import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
@@ -27,9 +23,8 @@ import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 class SettingsConnectionsController : SettingsLegacyController() {
 
     private val connectionsManager: ConnectionsManager by injectLazy()
-    private val connectionsPreferences: ConnectionsPreferences by injectLazy()
 
-    private var accountPreference: Preference? = null
+    private var trackerPreference: TrackerPreference? = null
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         titleRes = MR.strings.connections
@@ -39,39 +34,30 @@ class SettingsConnectionsController : SettingsLegacyController() {
         connectionsManager.discord.migrateLegacyActivitySettingsIfNeeded()
 
         preferenceCategory {
-            titleRes = MR.strings.connections_discord
+            titleRes = MR.strings.services
 
-            switchPreference {
-                bindTo(connectionsPreferences.enableDiscordRPC())
-                titleRes = MR.strings.discord_rpc_enable
-                summary = context.getString(MR.strings.discord_rpc_enable_summary)
+            // Styled like a tracker row (colored logo card, green check when logged in) as in
+            // Settings > Tracking.
+            val discordPreference = TrackerPreference(context).apply {
+                key = "discord_connections_entry"
+                title = context.getString(MR.strings.connections_discord)
+                iconRes = connectionsManager.discord.getLogo()
+                iconColor = connectionsManager.discord.getLogoColor()
+                isPersistent = false
+                checked = isDiscordLoggedIn()
+                onClick {
+                    router.pushController(SettingsDiscordController().withFadeTransaction())
+                }
             }
-
-            // Styled like a tracker row (colored logo card, e.g. AniList/MyAnimeList in
-            // Settings > Tracking) rather than a plain preference.
-            accountPreference = add(
-                TrackerPreference(context).apply {
-                    key = "discord_connections_entry"
-                    title = context.getString(MR.strings.connections_discord)
-                    iconRes = connectionsManager.discord.getLogo()
-                    iconColor = connectionsManager.discord.getLogoColor()
-                    isPersistent = false
-                    summary = accountSummary(context)
-                    onClick {
-                        router.pushController(SettingsDiscordAccountController().withFadeTransaction())
-                    }
-                },
-            )
+            trackerPreference = discordPreference
+            add<Preference>(discordPreference)
         }
     }
 
     override fun onActivityResumed(activity: Activity) {
         super.onActivityResumed(activity)
-        accountPreference?.summary = accountSummary(activity)
+        trackerPreference?.checked = isDiscordLoggedIn()
     }
 
-    private fun accountSummary(context: Context): String {
-        return connectionsManager.discord.getAccount()?.username
-            ?: context.getString(MR.strings.discord_rpc_not_connected)
-    }
+    private fun isDiscordLoggedIn(): Boolean = connectionsManager.discord.getAccount() != null
 }
