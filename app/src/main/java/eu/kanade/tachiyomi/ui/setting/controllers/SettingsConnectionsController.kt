@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.setting.controllers
 
 import android.app.Activity
+import android.view.View
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
@@ -51,6 +52,11 @@ class SettingsConnectionsController : SettingsLegacyController() {
             trackerPreference = discordPreference
             add(discordPreference)
         }
+    }
+
+    override fun onAttach(view: View) {
+        super.onAttach(view)
+        trackerPreference?.checked = isDiscordLoggedIn()
     }
 
     override fun onActivityResumed(activity: Activity) {
