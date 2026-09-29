@@ -31,6 +31,7 @@ public:
         const char* button2Label, const char* button2Url
     );
     void SetOnlineStatus(int statusType);
+    int GetOnlineStatus();
     void Clear();
     void Shutdown();
     void Destroy();
@@ -58,3 +59,5 @@ private:
     static jclass discordRpcManagerClass_;
     static jmethodID onNativeStatusChangedMethod_;
 };
+
+extern DiscordBridge g_discordBridge;

@@ -7,6 +7,7 @@ add_library(
         rokku_discord
         SHARED
         discord_bridge.cpp
+        discord_bridge_status.cpp
 )
 
 target_include_directories(
