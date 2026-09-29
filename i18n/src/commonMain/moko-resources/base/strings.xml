@@ -716,6 +716,8 @@
     <string name="discord_rpc_section_activity">Activity</string>
     <string name="discord_rpc_section_buttons">Buttons</string>
     <string name="discord_rpc_section_privacy">Privacy</string>
+    <string name="discord_rpc_upload_local_covers">Upload local covers</string>
+    <string name="discord_rpc_upload_local_covers_summary">Uploads custom and local covers to a public image host (uguu.se, catbox.moe) so Discord can show them. Anyone with the link can view the image. Skipped for extensions flagged as NSFW, but other sources may still host adult content.</string>
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>
