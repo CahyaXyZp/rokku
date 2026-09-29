@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.ui.setting.controllers
 
 import android.app.Activity
-import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
@@ -50,7 +49,7 @@ class SettingsConnectionsController : SettingsLegacyController() {
                 }
             }
             trackerPreference = discordPreference
-            add<Preference>(discordPreference)
+            add(discordPreference)
         }
     }
 
