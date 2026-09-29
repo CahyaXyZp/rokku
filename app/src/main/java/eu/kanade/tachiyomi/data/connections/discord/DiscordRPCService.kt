@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.connections.discord
 
 import android.content.Context
 import co.touchlab.kermit.Logger
+import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -117,9 +118,44 @@ object DiscordRPCService {
         }
     }
 
-    // Local covers (file paths, content:// URIs) can't be rendered by Discord.
     private fun remoteImageUrl(url: String?): String? =
         url?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+
+    // Only the extension-level NSFW flag is available; there is no per-source or per-manga one.
+    private fun isNsfwSource(sourceId: Long?, extensionManager: ExtensionManager): Boolean {
+        if (sourceId == null) return false
+        val pkgName = extensionManager.getPackageName(sourceId) ?: return false
+        return extensionManager.installedExtensionsFlow.value.find { it.pkgName == pkgName }?.isNsfw == true
+    }
+
+    /**
+     * Picks the large image for the presence. Covers Discord can't fetch itself (a custom cover,
+     * or a local file path / content:// URI) are only uploaded to a public host when the user
+     * turned that on and [sourceId] doesn't belong to an extension flagged as NSFW. Otherwise
+     * only http(s) covers are shown.
+     */
+    private suspend fun resolveCover(
+        context: Context,
+        coverUrl: String?,
+        mangaId: Long?,
+        sourceId: Long?,
+        connectionsPreferences: ConnectionsPreferences,
+        extensionManager: ExtensionManager,
+    ): String? {
+        val canUpload = connectionsPreferences.discordUploadLocalCovers().get() &&
+            !isNsfwSource(sourceId, extensionManager)
+
+        if (canUpload && mangaId != null) {
+            val customCover = Injekt.get<CoverCache>().getCustomCoverFile(mangaId)
+            if (customCover.exists()) {
+                DiscordImageUploader.resolveUrl(customCover)?.let { return it }
+            }
+        }
+
+        remoteImageUrl(coverUrl)?.let { return it }
+        if (!canUpload || coverUrl.isNullOrBlank()) return null
+        return DiscordImageUploader.resolveUrl(context, coverUrl)
+    }
 
     fun start(
         context: Context,
@@ -223,7 +259,7 @@ object DiscordRPCService {
      * buttons (each resolving a `{chapter_url}` placeholder against [chapterUrl], dropped if
      * still blank after that), and the large/small images. No-ops while [sourceId] is under
      * Incognito Mode (global or per-extension) and "Respect Incognito Mode" is on, or if no
-     * account is saved.
+     * account is saved. [mangaId] is only needed to find a custom cover to upload.
      */
     fun setReadingActivity(
         context: Context,
@@ -233,7 +269,9 @@ object DiscordRPCService {
         coverUrl: String?,
         sourceId: Long? = null,
         chapterUrl: String? = null,
+        mangaId: Long? = null,
         connectionsManager: ConnectionsManager = Injekt.get(),
+        connectionsPreferences: ConnectionsPreferences = Injekt.get(),
         preferences: PreferencesHelper = Injekt.get(),
         extensionManager: ExtensionManager = Injekt.get(),
     ) {
@@ -249,7 +287,7 @@ object DiscordRPCService {
                     .replace(TEMPLATE_CHAPTER, currentChapter.toString())
                     .replace(TEMPLATE_TOTAL, totalChapters.toString()),
             )
-            val cover = remoteImageUrl(coverUrl)
+            val cover = resolveCover(context, coverUrl, mangaId, sourceId, connectionsPreferences, extensionManager)
             val smallImage = if (cover != null && account.showAppIcon) RICH_PRESENCE_APP_ICON_URL else null
             val buttons = resolveButtons(account, chapterUrl)
 
