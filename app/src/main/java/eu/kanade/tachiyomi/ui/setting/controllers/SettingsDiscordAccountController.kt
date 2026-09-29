@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.util.system.materialAlertDialog
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.view.setMessage
 import uy.kohesive.injekt.injectLazy
+import yokai.domain.connections.service.ConnectionsPreferences
 import yokai.i18n.MR
 import yokai.util.lang.getString
 import android.R as AR
@@ -37,6 +38,7 @@ import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 class SettingsDiscordAccountController : SettingsLegacyController() {
 
     private val connectionsManager: ConnectionsManager by injectLazy()
+    private val connectionsPreferences: ConnectionsPreferences by injectLazy()
 
     private var screenRef: PreferenceScreen? = null
 
@@ -231,6 +233,20 @@ class SettingsDiscordAccountController : SettingsLegacyController() {
                 }
                 addPreference(showIconSwitch)
 
+                val uploadCoversSwitch = SwitchPreferenceCompat(context).apply {
+                    key = KEY_UPLOAD_LOCAL_COVERS
+                    title = context.getString(MR.strings.discord_rpc_upload_local_covers)
+                    summary = context.getString(MR.strings.discord_rpc_upload_local_covers_summary)
+                    isIconSpaceReserved = false
+                    isPersistent = false
+                    isChecked = connectionsPreferences.discordUploadLocalCovers().get()
+                    setOnPreferenceChangeListener { _, newValue ->
+                        connectionsPreferences.discordUploadLocalCovers().set(newValue as Boolean)
+                        true
+                    }
+                }
+                addPreference(uploadCoversSwitch)
+
                 val onlineStatusPref = ListPreference(context).apply {
                     key = KEY_ONLINE_STATUS
                     title = context.getString(MR.strings.discord_rpc_online_status)
@@ -413,6 +429,7 @@ class SettingsDiscordAccountController : SettingsLegacyController() {
         private const val KEY_ACTIVITY_TYPE = "discord_account_activity_type"
         private const val KEY_STATE_TEMPLATE = "discord_account_state_template"
         private const val KEY_SHOW_APP_ICON = "discord_account_show_app_icon"
+        private const val KEY_UPLOAD_LOCAL_COVERS = "discord_account_upload_local_covers"
         private const val KEY_ONLINE_STATUS = "discord_account_online_status"
         private const val KEY_BUTTON1_ENABLED = "discord_account_button1_enabled"
         private const val KEY_BUTTON1_LABEL = "discord_account_button1_label"
