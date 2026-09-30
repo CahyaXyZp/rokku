@@ -254,12 +254,13 @@ object DiscordRPCService {
     }
 
     /**
-     * Updates the Rich Presence using the account's own settings: activity type, a state built
-     * from its `{chapter}`/`{total}` template, its custom online status, its two configured
-     * buttons (each resolving a `{chapter_url}` placeholder against [chapterUrl], dropped if
-     * still blank after that), and the large/small images. No-ops while [sourceId] is under
-     * Incognito Mode (global or per-extension) and "Respect Incognito Mode" is on, or if no
-     * account is saved. [mangaId] is only needed to find a custom cover to upload.
+     * Updates the Rich Presence using the account's own settings: a state built from its
+     * `{chapter}`/`{total}` template, its custom online status, its two configured buttons
+     * (each resolving a `{chapter_url}` placeholder against [chapterUrl], dropped if still
+     * blank after that), and the large/small images. The activity type is always Watching.
+     * No-ops while [sourceId] is under Incognito Mode (global or per-extension) and "Respect
+     * Incognito Mode" is on, or if no account is saved. [mangaId] is only needed to find a
+     * custom cover to upload.
      */
     fun setReadingActivity(
         context: Context,
@@ -305,7 +306,6 @@ object DiscordRPCService {
                     button1Url = buttons.getOrNull(0)?.url,
                     button2Label = buttons.getOrNull(1)?.label,
                     button2Url = buttons.getOrNull(1)?.url,
-                    activityType = account.activityType,
                 ),
             )
         }

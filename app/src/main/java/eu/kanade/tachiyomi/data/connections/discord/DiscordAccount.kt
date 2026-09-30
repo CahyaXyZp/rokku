@@ -33,8 +33,6 @@ data class DiscordAccount(
     // Whether Rich Presence is skipped under Incognito Mode. Defaults match the old global
     // pref_discord_respect_incognito default (also migrated, same as above).
     val respectIncognito: Boolean = true,
-    // ActivityType.value (Watching/Playing/Streaming/Listening/Competing).
-    val activityType: Int = ActivityType.WATCHING.value,
     val activityStateTemplate: String = DEFAULT_ACTIVITY_STATE_TEMPLATE,
     // One of DiscordOnlineStatus's constants.
     val onlineStatus: String = DiscordOnlineStatus.ONLINE,
