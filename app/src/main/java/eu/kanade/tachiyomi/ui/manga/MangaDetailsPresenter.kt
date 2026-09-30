@@ -55,6 +55,7 @@ import eu.kanade.tachiyomi.ui.security.SecureActivityDelegate
 import eu.kanade.tachiyomi.util.chapter.ChapterFilter
 import eu.kanade.tachiyomi.util.chapter.ChapterSort
 import eu.kanade.tachiyomi.util.chapter.ChapterUtil
+import eu.kanade.tachiyomi.util.chapter.latestTrackerChapter
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithSource
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithTrackServiceTwoWay
 import eu.kanade.tachiyomi.util.chapter.updateTrackChapterMarkedAsRead
@@ -797,7 +798,7 @@ class MangaDetailsPresenter(
                 withUIContext { view?.updateChapters() }
             }
             if (read && deleteNow) {
-                val latestReadChapter = selectedChapters.maxByOrNull { it.chapter_number.toInt() }?.chapter
+                val latestReadChapter = selectedChapters.map { it.chapter }.latestTrackerChapter()
                 updateTrackChapterMarkedAsRead(preferences, latestReadChapter, manga.id) {
                     fetchTracks()
                 }
