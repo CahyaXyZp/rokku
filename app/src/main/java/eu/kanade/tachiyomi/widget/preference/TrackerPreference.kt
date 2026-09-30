@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.widget.preference
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
+import android.view.View
 import android.widget.ImageView
 import androidx.annotation.ColorInt
 import androidx.core.view.isVisible
@@ -34,6 +35,11 @@ class TrackerPreference @JvmOverloads constructor(context: Context, attrs: Attri
         val padding = if (Color.alpha(iconColor) == 0) 0 else 4.dpToPx
         holder.findViewById(AR.id.icon).setPadding(padding)
         checkedIcon.isVisible = checked ?: !getPersistedString("").isNullOrEmpty()
+
+        val longClickListener = onLongClick
+        holder.itemView.setOnLongClickListener(
+            longClickListener?.let { listener -> View.OnLongClickListener { listener() } },
+        )
     }
 
     @ColorInt
@@ -52,6 +58,9 @@ class TrackerPreference @JvmOverloads constructor(context: Context, attrs: Attri
             field = value
             notifyChanged()
         }
+
+    /** Optional long-press handler for the row. Return true when the press was handled. */
+    var onLongClick: (() -> Boolean)? = null
 
     public override fun notifyChanged() {
         super.notifyChanged()

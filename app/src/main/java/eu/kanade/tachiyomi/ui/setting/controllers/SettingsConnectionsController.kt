@@ -7,13 +7,18 @@ import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import eu.kanade.tachiyomi.ui.setting.add
 import eu.kanade.tachiyomi.ui.setting.iconRes
+import eu.kanade.tachiyomi.ui.setting.infoPreference
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
+import eu.kanade.tachiyomi.util.system.materialAlertDialog
+import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.view.setMessage
 import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import eu.kanade.tachiyomi.widget.preference.TrackerPreference
 import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
 import yokai.util.lang.getString
+import android.R as AR
 import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
 
 /**
@@ -48,9 +53,16 @@ class SettingsConnectionsController : SettingsLegacyController() {
                 onClick {
                     router.pushController(SettingsDiscordController().withFadeTransaction())
                 }
+                onLongClick = {
+                    val loggedIn = isDiscordLoggedIn()
+                    if (loggedIn) confirmLogout()
+                    loggedIn
+                }
             }
             trackerPreference = discordPreference
             add(discordPreference)
+
+            infoPreference(MR.strings.discord_rpc_logout_hint)
         }
     }
 
@@ -62,6 +74,19 @@ class SettingsConnectionsController : SettingsLegacyController() {
     override fun onActivityResumed(activity: Activity) {
         super.onActivityResumed(activity)
         trackerPreference?.checked = isDiscordLoggedIn()
+    }
+
+    private fun confirmLogout() {
+        val act = activity ?: return
+        act.materialAlertDialog()
+            .setMessage(MR.strings.discord_rpc_remove_account_confirm)
+            .setPositiveButton(AR.string.ok) { _, _ ->
+                connectionsManager.discord.logout()
+                act.toast(MR.strings.discord_rpc_account_removed)
+                trackerPreference?.checked = false
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
     }
 
     private fun isDiscordLoggedIn(): Boolean = connectionsManager.discord.getAccount() != null
