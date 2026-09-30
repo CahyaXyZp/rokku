@@ -90,6 +90,7 @@
     <string name="by_chapter_number">By chapter number</string>
     <string name="by_update_date">By upload date</string>
     <string name="scanlators">Scanlators</string>
+    <string name="chapter_counts_joined">%1$s · %2$s</string>
 
     <!-- Category -->
     <string name="category">Category</string>
