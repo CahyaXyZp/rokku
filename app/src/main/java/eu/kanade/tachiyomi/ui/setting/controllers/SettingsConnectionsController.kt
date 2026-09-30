@@ -62,7 +62,7 @@ class SettingsConnectionsController : SettingsLegacyController() {
             trackerPreference = discordPreference
             add(discordPreference)
 
-            infoPreference(MR.strings.discord_rpc_logout_hint)
+            infoPreference(MR.strings.connections_logout_hint)
         }
     }
 
