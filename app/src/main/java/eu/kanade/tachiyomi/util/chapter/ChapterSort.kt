@@ -40,13 +40,19 @@ class ChapterSort(val manga: Manga, val chapterFilter: ChapterFilter = Injekt.ge
         return chapters.sortedWith(sortComparator(true)).firstOrNull()
     }
 
+    /**
+     * The next chapter to read: the first unread main chapter. Additional chapters (1.1, 151.5)
+     * can be read on their own but never hold up the next main chapter, so an unread additional
+     * chapter is only returned once no unread main chapter is left.
+     */
     fun <T : Chapter> getNextUnreadChapter(rawChapters: List<T>, andFiltered: Boolean = true): T? {
         val chapters = when {
             andFiltered -> chapterFilter.filterChapters(rawChapters, manga)
             else -> rawChapters
         }
 
-        return chapters.sortedWith(sortComparator(true)).find { !it.read }
+        val unread = chapters.sortedWith(sortComparator(true)).filter { !it.read }
+        return unread.firstOrNull { it.isMainChapter } ?: unread.firstOrNull()
     }
 
     fun <T : Chapter> sortComparator(ignoreAsc: Boolean = false): Comparator<T> {
