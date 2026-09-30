@@ -676,6 +676,7 @@
 
 <!-- Connections -->
     <string name="connections">Connections</string>
+    <string name="connections_logout_hint">Long-press a service to log out</string>
     <string name="connections_discord" translatable="false">Discord</string>
     <string name="discord_rpc_enable">Enable Discord Rich Presence</string>
     <string name="discord_rpc_enable_summary">Show what you\'re reading as your Discord status while in the reader</string>
@@ -691,10 +692,7 @@
     <string name="discord_rpc_remove_account_confirm">Remove this account?</string>
     <string name="discord_rpc_account_added">Account added</string>
     <string name="discord_rpc_account_add_failed">Failed to log in with Discord. Try again</string>
-    <string name="discord_rpc_logout">Log out</string>
     <string name="discord_rpc_account_removed">Account removed</string>
-    <string name="discord_rpc_activity_type">Activity type</string>
-    <string name="discord_rpc_activity_type_summary">How this shows up on Discord, e.g. "Watching Chapter 5"</string>
     <string name="discord_rpc_state_template">Activity state</string>
     <string name="discord_rpc_state_template_summary">Use {chapter} and {total} as placeholders</string>
     <string name="discord_rpc_online_status">Online status</string>
