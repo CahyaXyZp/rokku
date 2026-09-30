@@ -329,8 +329,8 @@ class MangaHeaderHolder(
     }
 
     fun bindChapters() {
+        val presenter = adapter.delegate.mangaPresenter()
         val countText = itemView.context.chapterCountText(presenter.chapters)
-        val count = presenter.chapters.size
         val missingCount = if (adapter.uiPreferences.hideChapterMissingCount().get()) {
             0
         } else {
