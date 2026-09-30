@@ -7,28 +7,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import dev.icerock.moko.resources.StringResource
 import dev.icerock.moko.resources.compose.stringResource
 import eu.kanade.tachiyomi.core.storage.preference.collectAsState
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
-import eu.kanade.tachiyomi.data.connections.discord.ActivityType
 import eu.kanade.tachiyomi.data.connections.discord.Discord
-import eu.kanade.tachiyomi.data.connections.discord.DiscordAccount
 import eu.kanade.tachiyomi.data.connections.discord.DiscordOnlineStatus
 import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginActivity
-import eu.kanade.tachiyomi.util.compose.LocalDialogHostState
-import eu.kanade.tachiyomi.util.compose.currentOrThrow
-import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import yokai.domain.connections.service.ConnectionsPreferences
-import yokai.domain.simple
 import yokai.i18n.MR
 import yokai.presentation.component.preference.Preference
 import yokai.presentation.settings.ComposableSettings
@@ -54,17 +46,12 @@ object SettingsDiscordScreen : ComposableSettings() {
             account = discord.getAccount()
         }
 
-        val currentAccount = account
-        return if (currentAccount == null) {
+        return if (account == null) {
             getLoggedOutPreferences(
                 onLogin = { loginLauncher.launch(Intent(context, DiscordLoginActivity::class.java)) },
             )
         } else {
-            getAccountPreferences(
-                discord = discord,
-                account = currentAccount,
-                onLoggedOut = { account = null },
-            )
+            getAccountPreferences(discord)
         }
     }
 
@@ -87,15 +74,7 @@ object SettingsDiscordScreen : ComposableSettings() {
     }
 
     @Composable
-    private fun getAccountPreferences(
-        discord: Discord,
-        account: DiscordAccount,
-        onLoggedOut: () -> Unit,
-    ): List<Preference> {
-        val context = LocalContext.current
-        val scope = rememberCoroutineScope()
-        val alertDialog = LocalDialogHostState.currentOrThrow
-
+    private fun getAccountPreferences(discord: Discord): List<Preference> {
         val prefs = remember(discord) { DiscordAccountPreferences(discord) }
         val connectionsPreferences = remember { Injekt.get<ConnectionsPreferences>() }
         val enableRpc = remember { connectionsPreferences.enableDiscordRPC() }
@@ -106,13 +85,6 @@ object SettingsDiscordScreen : ComposableSettings() {
         val button2Enabled by prefs.button2Enabled.collectAsState()
         val customName by prefs.activityName.collectAsState()
 
-        val activityTypes = persistentMapOf(
-            ActivityType.PLAYING.value to "Playing",
-            ActivityType.STREAMING.value to "Streaming",
-            ActivityType.LISTENING.value to "Listening",
-            ActivityType.WATCHING.value to "Watching",
-            ActivityType.COMPETING.value to "Competing",
-        )
         val onlineStatuses = persistentMapOf(
             DiscordOnlineStatus.ONLINE to "Online",
             DiscordOnlineStatus.IDLE to "Idle",
@@ -128,25 +100,6 @@ object SettingsDiscordScreen : ComposableSettings() {
                         title = stringResource(MR.strings.discord_rpc_enable),
                         subtitle = stringResource(MR.strings.discord_rpc_enable_summary),
                     ),
-                    Preference.PreferenceItem.TextPreference(
-                        title = account.username,
-                    ),
-                    Preference.PreferenceItem.TextPreference(
-                        title = stringResource(MR.strings.discord_rpc_logout),
-                        onClick = {
-                            scope.launch {
-                                alertDialog.simple {
-                                    titleRes = MR.strings.discord_rpc_logout
-                                    textRes = MR.strings.discord_rpc_remove_account_confirm
-                                    onConfirm = {
-                                        discord.logout()
-                                        context.toast(MR.strings.discord_rpc_account_removed)
-                                        onLoggedOut()
-                                    }
-                                }
-                            }
-                        },
-                    ),
                 ),
             ),
             Preference.PreferenceGroup(
@@ -157,11 +110,6 @@ object SettingsDiscordScreen : ComposableSettings() {
                         pref = prefs.activityName,
                         title = stringResource(MR.strings.discord_rpc_activity_name),
                         subtitle = customName.ifBlank { stringResource(MR.strings.discord_rpc_activity_name_summary) },
-                    ),
-                    Preference.PreferenceItem.ListPreference(
-                        pref = prefs.activityType,
-                        title = stringResource(MR.strings.discord_rpc_activity_type),
-                        entries = activityTypes,
                     ),
                     Preference.PreferenceItem.EditTextPreference(
                         pref = prefs.activityState,

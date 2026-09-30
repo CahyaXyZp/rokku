@@ -1,7 +1,6 @@
 package yokai.presentation.settings.screen.discord
 
 import eu.kanade.tachiyomi.core.preference.Preference
-import eu.kanade.tachiyomi.data.connections.discord.ActivityType
 import eu.kanade.tachiyomi.data.connections.discord.Discord
 import eu.kanade.tachiyomi.data.connections.discord.DiscordAccount
 import kotlinx.coroutines.CoroutineScope
@@ -55,14 +54,6 @@ internal class DiscordAccountPreferences(discord: Discord) {
         fallback = "",
         read = { it.customActivityName },
         write = { account, value -> account.copy(customActivityName = value.trim()) },
-    )
-
-    val activityType = DiscordAccountPreference(
-        discord = discord,
-        key = "discord_account_activity_type",
-        fallback = ActivityType.WATCHING.value,
-        read = { it.activityType },
-        write = { account, value -> account.copy(activityType = value) },
     )
 
     val activityState = DiscordAccountPreference(
