@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.database.models.isOneShotOrCompleted
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.util.chapter.readTrackerProgress
 import kotlinx.collections.immutable.ImmutableList
 import okhttp3.OkHttpClient
 import uy.kohesive.injekt.injectLazy
@@ -162,8 +163,5 @@ suspend fun TrackService.getCompletedDate(track: Track, allRead: Boolean): Long 
     return 0L
 }
 
-suspend fun TrackService.getLastChapterRead(track: Track): Float {
-    val chapters = getChapter.awaitAll(track.manga_id, false)
-    val lastChapterRead = chapters.filter { it.read }.minByOrNull { it.source_order }
-    return lastChapterRead?.takeIf { it.isRecognizedNumber }?.chapter_number ?: 0f
-}
+suspend fun TrackService.getLastChapterRead(track: Track): Float =
+    getChapter.awaitAll(track.manga_id, false).readTrackerProgress()

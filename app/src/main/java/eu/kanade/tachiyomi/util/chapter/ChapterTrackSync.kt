@@ -41,13 +41,22 @@ suspend fun syncChaptersWithTrackServiceTwoWay(
     }
 
     val sortedChapters = chapters.sortedBy { it.chapter_number }
-    sortedChapters
-        .filter { chapter -> chapter.chapter_number <= remoteTrack.last_chapter_read && !chapter.read }
-        .forEach { it.read = true }
-    updateChapter.awaitAll(sortedChapters.map(Chapter::toProgressUpdate))
+    val newlyRead = sortedChapters.unreadMainChaptersUpTo(remoteTrack.last_chapter_read)
+    if (newlyRead.isNotEmpty()) {
+        newlyRead.forEach { it.read = true }
+        updateChapter.awaitAll(newlyRead.map(Chapter::toProgressUpdate))
+    }
 
-    // only take into account continuous reading
-    val localLastRead = sortedChapters.takeWhile { it.read }.lastOrNull()?.chapter_number ?: 0F
+    // only take into account continuous reading of main chapters
+    val localLastRead = sortedChapters
+        .filter { it.isTrackerProgress }
+        .takeWhile { it.read }
+        .lastOrNull()?.chapter_number ?: 0F
+
+    // never lower the remote progress, and skip the call when there is nothing new to send
+    if (localLastRead <= remoteTrack.last_chapter_read) {
+        return@withIOContext
+    }
 
     // update remote
     remoteTrack.last_chapter_read = localLastRead
@@ -76,7 +85,7 @@ fun updateTrackChapterMarkedAsRead(
     if (!preferences.trackMarkedAsRead().get()) return
     mangaId ?: return
 
-    val newChapterRead = newLastChapter?.chapter_number ?: 0f
+    val newChapterRead = newLastChapter?.takeIf { it.isTrackerProgress }?.chapter_number ?: return
 
     // To avoid unnecessary calls if multiple marked as read for same manga
     if ((trackingJobs[mangaId]?.second ?: 0f) < newChapterRead) {
@@ -100,6 +109,8 @@ suspend fun updateTrackChapterRead(
     getTrack: GetTrack = Injekt.get(),
     insertTrack: InsertTrack = Injekt.get(),
 ): List<Pair<TrackService, String?>> {
+    if (!isTrackerProgressNumber(newChapterRead)) return emptyList()
+
     val trackManager = Injekt.get<TrackManager>()
     val trackList = getTrack.awaitAllByMangaId(mangaId)
     val failures = mutableListOf<Pair<TrackService, String?>>()
