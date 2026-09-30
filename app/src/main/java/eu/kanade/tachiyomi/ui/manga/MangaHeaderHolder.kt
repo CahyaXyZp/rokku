@@ -48,6 +48,7 @@ import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
 import eu.kanade.tachiyomi.ui.manga.related.RelatedMangaCardAdapter
 import eu.kanade.tachiyomi.ui.manga.related.RelatedMangaCardItem
 import eu.kanade.tachiyomi.ui.reader.viewer.countMissingChapters
+import eu.kanade.tachiyomi.util.chapter.chapterCountText
 import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.lang.toNormalized
 import eu.kanade.tachiyomi.util.system.getResourceColor
@@ -328,7 +329,7 @@ class MangaHeaderHolder(
     }
 
     fun bindChapters() {
-        val presenter = adapter.delegate.mangaPresenter()
+        val countText = itemView.context.chapterCountText(presenter.chapters)
         val count = presenter.chapters.size
         val missingCount = if (adapter.uiPreferences.hideChapterMissingCount().get()) {
             0
@@ -336,15 +337,13 @@ class MangaHeaderHolder(
             countMissingChapters(presenter.chapters)
         }
         if (binding != null) {
-            binding.chaptersTitle.text =
-                itemView.context.getString(MR.plurals.chapters_plural, count, count)
+            binding.chaptersTitle.text = countText
             binding.missingChaptersText.isVisible = missingCount > 0
             binding.missingChaptersText.text =
                 itemView.context.getString(MR.plurals.missing_chapters_count, missingCount, missingCount)
             binding.filtersText.text = presenter.currentFilters()
         } else if (chapterBinding != null) {
-            chapterBinding.chaptersTitle.text =
-                itemView.context.getString(MR.plurals.chapters_plural, count, count)
+            chapterBinding.chaptersTitle.text = countText
             chapterBinding.missingChaptersText.isVisible = missingCount > 0
             chapterBinding.missingChaptersText.text =
                 itemView.context.getString(MR.plurals.missing_chapters_count, missingCount, missingCount)
