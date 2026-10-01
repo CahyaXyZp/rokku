@@ -55,8 +55,13 @@ internal class AppUpdateNotifier(private val context: Context) {
         val url = release.downloadLink
         val releaseUrl = release.releaseLink
         val isBeta = release.preRelease == true
+        val canDownload = release.isApkDownloadable
 
-        val pendingIntent = NotificationReceiver.openUpdatePendingActivity(context, body, url)
+        val pendingIntent = if (canDownload) {
+            NotificationReceiver.openUpdatePendingActivity(context, body, url)
+        } else {
+            viewPagePendingIntent(releaseUrl)
+        }
         releasePageUrl = releaseUrl
         with(notificationBuilder) {
             setContentTitle(context.getString(MR.strings.app_name))
@@ -74,16 +79,30 @@ internal class AppUpdateNotifier(private val context: Context) {
             setSmallIcon(AR.drawable.stat_sys_download_done)
             color = context.getResourceColor(R.attr.colorSecondary)
             clearActions()
-            val isOnA12 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            // Download action
-            addAction(
-                AR.drawable.stat_sys_download_done,
-                context.getString(if (isOnA12) MR.strings.update else MR.strings.download),
-                NotificationReceiver.startAppUpdatePendingJob(context, url, true),
-            )
+            if (canDownload) {
+                val isOnA12 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                // Download action
+                addAction(
+                    AR.drawable.stat_sys_download_done,
+                    context.getString(if (isOnA12) MR.strings.update else MR.strings.download),
+                    NotificationReceiver.startAppUpdatePendingJob(context, url, true),
+                )
+            }
             addReleasePageAction()
         }
         notificationBuilder.show()
+    }
+
+    private fun viewPagePendingIntent(url: String): PendingIntent {
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context,
+            url.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun NotificationCompat.Builder.addReleasePageAction() {

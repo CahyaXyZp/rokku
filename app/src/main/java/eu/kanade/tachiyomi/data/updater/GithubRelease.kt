@@ -22,11 +22,19 @@ data class GithubRelease(
 ) {
 
     /**
+     * False when the update only links to a page, like a nightly build on GitHub Actions.
+     */
+    val isApkDownloadable: Boolean
+        get() = assets.isNotEmpty()
+
+    /**
      * Get download link of latest release from the assets.
-     * @return download link of latest release.
+     * @return download link of latest release, or the release page when there are no assets.
      */
     val downloadLink: String
         get() {
+            if (assets.isEmpty()) return releaseLink
+
             val apkVariant = when (Build.SUPPORTED_ABIS[0]) {
                 "arm64-v8a" -> "-arm64-v8a"
                 "armeabi-v7a" -> "-armeabi-v7a"

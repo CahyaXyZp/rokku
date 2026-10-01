@@ -1,9 +1,11 @@
 package eu.kanade.tachiyomi.data.updater
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -79,7 +81,7 @@ class AppDownloadInstallJob(private val context: Context, workerParams: WorkerPa
             val result = withIOContext {
                 AppUpdateChecker().checkForUpdate(context, true, doExtrasAfterNewUpdate = false)
             }
-            if (result is AppUpdateResult.NewUpdate) {
+            if (result is AppUpdateResult.NewUpdate && result.release.isApkDownloadable) {
                 AppUpdateNotifier(context.localeContext).cancel()
                 AppUpdateNotifier.releasePageUrl = result.release.releaseLink
                 url = result.release.downloadLink
@@ -187,6 +189,14 @@ class AppDownloadInstallJob(private val context: Context, workerParams: WorkerPa
         private var instance: WeakReference<AppDownloadInstallJob>? = null
 
         fun start(context: Context, url: String?, notifyOnInstall: Boolean, waitUntilIdle: Boolean = false) {
+            // Nightly updates link to a GitHub Actions run page, not to an APK
+            if (url != null && url.isActionsRunUrl()) {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+                return
+            }
+
             val data = Data.Builder()
             data.putString(EXTRA_DOWNLOAD_URL, url)
             data.putBoolean(EXTRA_NOTIFY_ON_INSTALL, notifyOnInstall)

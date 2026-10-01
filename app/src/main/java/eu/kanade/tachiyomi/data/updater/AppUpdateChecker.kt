@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.updater
 import android.content.Context
 import android.os.Build
 import androidx.annotation.VisibleForTesting
+import co.touchlab.kermit.Logger
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.network.GET
@@ -10,6 +11,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.system.localeContext
+import eu.kanade.tachiyomi.util.system.w
 import eu.kanade.tachiyomi.util.system.withIOContext
 import kotlinx.serialization.json.Json
 import uy.kohesive.injekt.Injekt
@@ -31,13 +33,11 @@ class AppUpdateChecker(
         }
 
         return withIOContext {
-            val repo = if (BuildConfig.NIGHTLY) NIGHTLY_GITHUB_REPO else GITHUB_REPO
-            // Nightly releases are always published as GitHub prereleases, so
-            // `releases/latest` (which excludes prereleases) 404s for that repo -
-            // always use the list endpoint there regardless of the beta preference.
-            val result = if (preferences.checkForBetas().get() || BuildConfig.NIGHTLY) {
+            val result = if (BuildConfig.NIGHTLY) {
+                checkNightly()
+            } else if (preferences.checkForBetas().get()) {
                 networkService.client
-                    .newCall(GET("https://api.github.com/repos/$repo/releases"))
+                    .newCall(GET("https://api.github.com/repos/$GITHUB_REPO/releases"))
                     .awaitSuccess()
                     .parseAs<List<GithubRelease>>()
                     .let { githubReleases ->
@@ -62,7 +62,7 @@ class AppUpdateChecker(
                     }
             } else {
                 networkService.client
-                    .newCall(GET("https://api.github.com/repos/$repo/releases/latest"))
+                    .newCall(GET("https://api.github.com/repos/$GITHUB_REPO/releases/latest"))
                     .awaitSuccess()
                     .parseAs<GithubRelease>()
                     .let {
@@ -78,7 +78,8 @@ class AppUpdateChecker(
             }
             if (doExtrasAfterNewUpdate && result is AppUpdateResult.NewUpdate) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    preferences.appShouldAutoUpdate().get() != AppDownloadInstallJob.NEVER
+                    preferences.appShouldAutoUpdate().get() != AppDownloadInstallJob.NEVER &&
+                    result.release.isApkDownloadable
                 ) {
                     AppDownloadInstallJob.start(context, null, false, waitUntilIdle = true)
                 }
@@ -87,6 +88,41 @@ class AppUpdateChecker(
 
             result
         }
+    }
+
+    /**
+     * Nightly builds are only published as GitHub Actions artifacts. The latest successful run on
+     * master is compared with the commit the installed build was made from, so a build that is
+     * newer than the latest run is never offered a downgrade.
+     */
+    private suspend fun checkNightly(): AppUpdateResult {
+        val run = networkService.client
+            .newCall(
+                GET(
+                    "https://api.github.com/repos/$GITHUB_REPO/actions/workflows/$NIGHTLY_WORKFLOW_FILE/runs" +
+                        "?branch=master&status=success&per_page=1",
+                ),
+            )
+            .awaitSuccess()
+            .parseAs<GithubWorkflowRuns>()
+            .runs
+            .firstOrNull()
+        preferences.lastAppCheck().set(Date().time)
+        run ?: return AppUpdateResult.NoNewUpdate
+
+        val compare = try {
+            networkService.client
+                .newCall(GET("https://api.github.com/repos/$GITHUB_REPO/compare/${BuildConfig.COMMIT_SHA}...${run.headSha}"))
+                .awaitSuccess()
+                .parseAs<GithubCompare>()
+        } catch (e: Exception) {
+            // The installed commit isn't on GitHub, e.g. a local build
+            Logger.w(e)
+            return AppUpdateResult.NoNewUpdate
+        }
+
+        val release = compare.toNightlyRelease(run.url, BuildConfig.COMMIT_COUNT.toIntOrNull())
+        return if (release != null) AppUpdateResult.NewUpdate(release) else AppUpdateResult.NoNewUpdate
     }
 
     @VisibleForTesting
@@ -107,11 +143,15 @@ val RELEASE_TAG: String by lazy {
 }
 
 val GITHUB_REPO: String by lazy {
-    "rokku-app/rokku"
+    "CahyaXyZp/rokku"
 }
 
 val NIGHTLY_GITHUB_REPO: String by lazy {
-    "rokku-app/rokku-nightly"
+    GITHUB_REPO
 }
 
-val RELEASE_URL = "https://github.com/${if (BuildConfig.NIGHTLY) NIGHTLY_GITHUB_REPO else GITHUB_REPO}/releases/tag/$RELEASE_TAG"
+val RELEASE_URL = if (BuildConfig.NIGHTLY) {
+    "https://github.com/$GITHUB_REPO/actions/workflows/$NIGHTLY_WORKFLOW_FILE"
+} else {
+    "https://github.com/$GITHUB_REPO/releases/tag/$RELEASE_TAG"
+}
