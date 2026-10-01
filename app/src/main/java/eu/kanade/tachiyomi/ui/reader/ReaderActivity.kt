@@ -927,6 +927,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private fun initializeMenu() {
         // Set binding.toolbar
         setSupportActionBar(binding.toolbar)
+        autoScroller.bind()
         val primaryColor = ColorUtils.setAlphaComponent(
             getResourceColor(R.attr.colorSurface),
             200,
@@ -1513,6 +1514,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPause() {
+        autoScroller.stop()
         viewModel.flushReadTimer()
         DiscordRPCService.scheduleStop(this, viewModel.manga?.id)
         super.onPause()
