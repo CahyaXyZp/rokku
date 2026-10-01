@@ -71,10 +71,11 @@ suspend fun syncChaptersWithTrackServiceTwoWay(
 }
 
 /**
- * Applies the progress a tracker already had when it was linked to the local chapters, when the
- * user turned that on. Only main chapters that exist locally are marked read, and only when the
- * tracker is ahead of what is already read here: equal progress means the entry was just created
- * from local progress, and marking chapters below it would also read the ones skipped on purpose.
+ * Applies the progress a tracker already has to the local chapters, when the user turned that on.
+ * It runs when a tracker is linked and when the manga is refreshed. Only main chapters that exist
+ * locally are marked read, and only when the tracker is ahead of what is already read here: equal
+ * progress means the entry was just created from local progress, and marking chapters below it
+ * would also read the ones skipped on purpose.
  *
  * @return the chapters that were marked read.
  */

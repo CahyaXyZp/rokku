@@ -26,7 +26,6 @@ import eu.kanade.tachiyomi.ui.setting.infoPreference
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
-import eu.kanade.tachiyomi.ui.setting.summaryMRes
 import eu.kanade.tachiyomi.ui.setting.switchPreference
 import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.openInBrowser
@@ -65,8 +64,7 @@ class SettingsTrackingController :
         }
         switchPreference {
             bindTo(trackPreferences.syncProgressOnBind())
-            titleRes = MR.strings.sync_progress_when_linking
-            summaryMRes = MR.strings.sync_progress_when_linking_summary
+            titleRes = MR.strings.sync_chapters_with_tracker_progress
         }
         preferenceCategory {
             titleRes = MR.strings.services
