@@ -36,6 +36,8 @@ class TrackPreferences(
 
     fun autoUpdateTrack() = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
 
+    fun syncProgressOnBind() = preferenceStore.getBoolean("pref_track_sync_progress_on_bind", false)
+
     companion object {
         fun trackUsername(syncId: Long) = Preference.privateKey("pref_mangasync_username_$syncId")
 

@@ -19,12 +19,14 @@ import eu.kanade.tachiyomi.data.track.shikimori.ShikimoriApi
 import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.ui.setting.SettingsLegacyController
 import eu.kanade.tachiyomi.ui.setting.add
+import eu.kanade.tachiyomi.ui.setting.bindTo
 import eu.kanade.tachiyomi.ui.setting.defaultValue
 import eu.kanade.tachiyomi.ui.setting.iconRes
 import eu.kanade.tachiyomi.ui.setting.infoPreference
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
+import eu.kanade.tachiyomi.ui.setting.summaryMRes
 import eu.kanade.tachiyomi.ui.setting.switchPreference
 import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.openInBrowser
@@ -60,6 +62,11 @@ class SettingsTrackingController :
             key = Keys.trackMarkedAsRead
             titleRes = MR.strings.update_tracking_marked_read
             defaultValue = false
+        }
+        switchPreference {
+            bindTo(trackPreferences.syncProgressOnBind())
+            titleRes = MR.strings.sync_progress_when_linking
+            summaryMRes = MR.strings.sync_progress_when_linking_summary
         }
         preferenceCategory {
             titleRes = MR.strings.services

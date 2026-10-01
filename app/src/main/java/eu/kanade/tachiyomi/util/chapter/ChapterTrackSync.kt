@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.data.track.DelayedTrackingUpdateJob
 import eu.kanade.tachiyomi.data.track.EnhancedTrackService
 import eu.kanade.tachiyomi.data.track.TrackManager
+import eu.kanade.tachiyomi.data.track.TrackPreferences
 import eu.kanade.tachiyomi.data.track.TrackService
 import eu.kanade.tachiyomi.util.system.isOnline
 import eu.kanade.tachiyomi.util.system.launchIO
@@ -67,6 +68,37 @@ suspend fun syncChaptersWithTrackServiceTwoWay(
     } catch (e: Throwable) {
         Logger.w(e)
     }
+}
+
+/**
+ * Applies the progress a tracker already had when it was linked to the local chapters, when the
+ * user turned that on. Only main chapters that exist locally are marked read, and only when the
+ * tracker is ahead of what is already read here: equal progress means the entry was just created
+ * from local progress, and marking chapters below it would also read the ones skipped on purpose.
+ *
+ * @return the chapters that were marked read.
+ */
+suspend fun applyRemoteProgressOnBind(
+    chapters: List<Chapter>,
+    remoteProgress: Float,
+    trackPreferences: TrackPreferences = Injekt.get(),
+    updateChapter: UpdateChapter = Injekt.get(),
+): List<Chapter> = withIOContext {
+    if (!trackPreferences.syncProgressOnBind().get()) {
+        return@withIOContext emptyList()
+    }
+    if (remoteProgress <= chapters.readTrackerProgress()) {
+        return@withIOContext emptyList()
+    }
+
+    val toMark = chapters.unreadMainChaptersUpTo(remoteProgress)
+    if (toMark.isEmpty()) {
+        return@withIOContext emptyList()
+    }
+
+    toMark.forEach { it.read = true }
+    updateChapter.awaitAll(toMark.map(Chapter::toProgressUpdate))
+    toMark
 }
 
 private var trackingJobs = HashMap<Long, Pair<Job?, Float?>>()
