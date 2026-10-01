@@ -34,6 +34,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.data.track.EnhancedTrackService
 import eu.kanade.tachiyomi.data.track.TrackManager
+import eu.kanade.tachiyomi.data.track.TrackPreferences
 import eu.kanade.tachiyomi.data.track.TrackService
 import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.network.HttpException
@@ -120,6 +121,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MangaDetailsPresenter(
     val mangaId: Long,
@@ -147,6 +149,7 @@ class MangaDetailsPresenter(
     private val deleteTrack: DeleteTrack by injectLazy()
     private val getTrack: GetTrack by injectLazy()
     private val insertTrack: InsertTrack by injectLazy()
+    private val trackPreferences: TrackPreferences by injectLazy()
     private val getHistory: GetHistory by injectLazy()
 
     private val networkPreferences: NetworkPreferences by injectLazy()
@@ -716,6 +719,9 @@ class MangaDetailsPresenter(
             withUIContext {
                 view?.updateChapters()
             }
+            if (trackPreferences.syncProgressOnBind().get()) {
+                refreshTracking(syncProgress = true)
+            }
         }
 
         if (isRelatedMangaEnabled()) {
@@ -1234,9 +1240,14 @@ class MangaDetailsPresenter(
         withContext(Dispatchers.Main) { view?.refreshTracking(trackList) }
     }
 
-    fun refreshTracking(showOfflineSnack: Boolean = false, trackIndex: Int? = null) {
+    fun refreshTracking(
+        showOfflineSnack: Boolean = false,
+        trackIndex: Int? = null,
+        syncProgress: Boolean = false,
+    ) {
         if (view?.isNotOnline(showOfflineSnack) == false) {
             presenterScope.launch {
+                val markedAnyChapter = AtomicBoolean(false)
                 val asyncList = (trackIndex?.let { listOf(trackList[it]) } ?: trackList.filter { it.track != null })
                     .map { item ->
                         async(Dispatchers.IO) {
@@ -1249,6 +1260,13 @@ class MangaDetailsPresenter(
                             if (trackItem != null) {
                                 insertTrack.await(trackItem)
                                 syncChaptersWithTrackServiceTwoWay(chapters, trackItem, item.service)
+                                if (syncProgress && item.service !is EnhancedTrackService) {
+                                    val marked = applyRemoteProgressOnBind(
+                                        allChapters.map { it.chapter },
+                                        trackItem.last_chapter_read,
+                                    )
+                                    if (marked.isNotEmpty()) markedAnyChapter.set(true)
+                                }
                                 trackItem
                             } else {
                                 item.track
@@ -1256,6 +1274,10 @@ class MangaDetailsPresenter(
                         }
                     }
                 asyncList.awaitAll()
+                if (markedAnyChapter.get()) {
+                    getChapters()
+                    withUIContext { view?.updateChapters() }
+                }
                 fetchTracks()
             }
         }
