@@ -622,6 +622,8 @@
     <string name="enhanced_tracking_info">Services that provide enhanced features for specific sources. Entries are automatically tracked when added to your library</string>
     <string name="update_tracking_after_reading">Update tracking after reading</string>
     <string name="update_tracking_marked_read">Update tracking when marked as read</string>
+    <string name="sync_progress_when_linking">Sync progress when linking a tracker</string>
+    <string name="sync_progress_when_linking_summary">Mark the main chapters you already have as read, up to the progress the tracker has. Additional chapters like 1.1 are never marked</string>
     <string name="reading">Reading</string>
     <string name="currently_reading">Currently Reading</string>
     <string name="dropped">Dropped</string>
