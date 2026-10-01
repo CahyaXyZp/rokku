@@ -1286,7 +1286,7 @@ class MangaDetailsPresenter(
                     trackError(e)
                     null
                 }
-                                val markedAnyChapter = withContext(Dispatchers.IO) {
+                val markedAnyChapter = withContext(Dispatchers.IO) {
                     if (binding != null) {
                         insertTrack.await(binding)
                     }
