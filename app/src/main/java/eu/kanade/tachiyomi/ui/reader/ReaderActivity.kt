@@ -262,6 +262,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
 
     private val readerPreferences: ReaderPreferences by injectLazy()
     private val basePreferences: BasePreferences by injectLazy()
+    private val autoScroller by lazy { ReaderAutoScroller(this) }
 
     companion object {
 
