@@ -55,6 +55,7 @@ import eu.kanade.tachiyomi.ui.security.SecureActivityDelegate
 import eu.kanade.tachiyomi.util.chapter.ChapterFilter
 import eu.kanade.tachiyomi.util.chapter.ChapterSort
 import eu.kanade.tachiyomi.util.chapter.ChapterUtil
+import eu.kanade.tachiyomi.util.chapter.applyRemoteProgressOnBind
 import eu.kanade.tachiyomi.util.chapter.latestTrackerChapter
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithSource
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithTrackServiceTwoWay
@@ -1285,12 +1286,22 @@ class MangaDetailsPresenter(
                     trackError(e)
                     null
                 }
-                withContext(Dispatchers.IO) {
+                                val markedAnyChapter = withContext(Dispatchers.IO) {
                     if (binding != null) {
                         insertTrack.await(binding)
                     }
 
                     syncChaptersWithTrackServiceTwoWay(chapters, item, service)
+
+                    binding != null && service !is EnhancedTrackService &&
+                        applyRemoteProgressOnBind(
+                            allChapters.map { it.chapter },
+                            binding.last_chapter_read,
+                        ).isNotEmpty()
+                }
+                if (markedAnyChapter) {
+                    getChapters()
+                    withUIContext { view?.updateChapters() }
                 }
                 fetchTracks()
             }
