@@ -117,6 +117,7 @@ class ReaderAutoScroller(private val activity: ReaderActivity) {
         if (chapters.nextChapter != null) return false
         return when (viewer) {
             is WebtoonViewer -> !viewer.recycler.canScrollVertically(1)
+
             is PagerViewer -> {
                 val pages = chapters.currChapter.pages ?: return false
                 activity.binding.readerNav.pageSeekbar.value.roundToInt() >= pages.lastIndex
