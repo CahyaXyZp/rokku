@@ -10,14 +10,21 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.8.0]
+
 ### Additions
 - Added Discord Rich Presence with multi-account support, OAuth login, Discord Social SDK authentication, manga cover and app icon support, and per-account settings ([@Hiirbaf](https://github.com/CahyaXyZp/rokku/pull/1))
 - The manga details screen background can now pick up a subtle tint from the cover, extending the accent already used for the header/buttons through the rest of the screen (off by default, toggle separately under Settings > Appearance > Details page > Theme background based on cover)
 - Local source now reads Year, Month, and Day fields from a chapter's ComicInfo.xml to set its displayed date, and downloaded chapters now write these fields when generating ComicInfo.xml
 - Browse and Global Search now keep a recent search history and let you save searches (scoped to one source or all sources), with incognito-aware suggestions ([@Hiirbaf](https://github.com/Hiirbaf))
+- Added support for additional chapters: chapters with a decimal number (like 1.1 or 151.5) are now counted separately from main chapters, so the chapter count reads "153 chapters · 3 additional chapters", and the Resume/Start button picks the next unread main chapter before any unread additional one
+- Added a "Sync chapters with tracker progress" option (Settings > Tracking, off by default): when linking a tracker, and when pulling to refresh a manga, chapters you already have are marked as read up to the progress the tracker has. Additional chapters are never marked and the tracker's progress is never lowered
+- Added auto-scroll to the reader: a chevron under the toolbar title opens a speed slider and a Start/Stop button. Long strip readers scroll smoothly, paged readers turn the page at an interval, scrolling pauses while the menu is open and stops at the end of the last chapter
 
 ### Changes
 - An automatic backup that fails because its saved location is no longer accessible (folder deleted, permission revoked, storage removed) now shows a notification telling you to pick a new one, instead of failing silently
+- Trackers now only receive main chapters as progress: additional chapters (like 1.1 or 151.5) are no longer sent as the last chapter read, and the two-way sync for Komga, Kavita and Suwayomi no longer lowers progress already on the tracker
+- The in-app update checker now uses the GitHub releases of CahyaXyZp/rokku for stable and beta builds, and the latest successful nightly workflow run for nightly builds (the update opens the run page in the browser, since Actions artifacts can't be downloaded without logging in)
 
 ### Fixes
 - Fixed extension loading failing when a repository published its lib version or content warning metadata as a numeric type instead of a string ([@pacoa-kdbg](https://github.com/pacoa-kdbg))
