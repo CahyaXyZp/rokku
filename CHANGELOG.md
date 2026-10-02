@@ -27,6 +27,8 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - The in-app update checker now uses the GitHub releases of CahyaXyZp/rokku for stable and beta builds, and the latest successful nightly workflow run for nightly builds (the update opens the run page in the browser, since Actions artifacts can't be downloaded without logging in)
 
 ### Fixes
+- Fixed the manga details screen's unmarked "Add to Library"/"Tracking" buttons and the "More" fade-out keeping the plain theme background instead of the cover-based page tint, leaving a visible seam when "Theme background based on cover" was on
+- Fixed cool-hued covers (blue/cyan/green) barely tinting the manga details page compared to warm ones, caused by HSL's saturation not being perceptually uniform across hues; the cover-tint blend now uses HCT instead
 - Fixed extension loading failing when a repository published its lib version or content warning metadata as a numeric type instead of a string ([@pacoa-kdbg](https://github.com/pacoa-kdbg))
 - Fixed "Show content in cutout area" doing nothing on Android 15+ (content still drew into the camera cutout/notch when the option was turned off)
 - Fixed a crash when updating all extensions with many updates pending (the work request's input data exceeded its size limit)
@@ -46,6 +48,14 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed a source's text filters swapping or losing their typed values when scrolling the filter list, caused by recycled rows accumulating listeners from earlier filters ([@Hiirbaf](https://github.com/Hiirbaf))
 - Fixed saving a reader page (or a merged double-page spread) to storage failing with a confusing error when the destination file couldn't be created
 - Fixed the backup restore file picker relying on an outdated file selection API that could fail to open correctly on some devices
+- Fixed reading history occasionally double-counting a session's read time when a chapter was saved while another save for the same chapter was still in flight
+- Fixed the about page's build time never actually showing a formatted date (the parser didn't match the timestamp format Rokku itself produces)
+- Fixed the date format preference not showing a live preview of each option, and some other list settings not refreshing their summary right after a change
+- Fixed the full-size cover viewer's replace button showing even for manga not in your library, where it can't actually be used
+- Added the app ID to the debug info included in crash log dumps
+- Fixed the library's app bar sometimes landing in the wrong position after returning to the Library tab when "show all categories" was off and the library wasn't scrolled to the top
+- Fixed the action mode toolbar (shown while selecting items) overlapping a display cutout/notch in landscape
+- Fixed a source showing without its language tag in lists/search results when that language was disabled in settings
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
