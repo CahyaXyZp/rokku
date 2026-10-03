@@ -251,6 +251,9 @@ dependencies {
     implementation(libs.markwon)
     implementation(libs.markwon.image)
     implementation(libs.markwon.linkify)
+    implementation(libs.markwon.strikethrough)
+    implementation(libs.markwon.tables)
+    implementation(libs.markwon.tasklist)
 
     implementation(libs.photoview)
     implementation(libs.directionalviewpager)
