@@ -1,0 +1,19 @@
+CREATE TABLE manga_notes(
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    notes TEXT NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE
+);
+
+getNotes:
+SELECT notes
+FROM manga_notes
+WHERE manga_id = :mangaId;
+
+upsert:
+INSERT OR REPLACE INTO manga_notes(manga_id, notes)
+VALUES (:mangaId, :notes);
+
+deleteForManga:
+DELETE FROM manga_notes
+WHERE manga_id = :mangaId;

@@ -1,0 +1,6 @@
+CREATE TABLE manga_notes(
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    notes TEXT NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE
+);
