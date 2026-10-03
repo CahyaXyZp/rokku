@@ -161,6 +161,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import yokai.domain.manga.models.cover
 import yokai.i18n.MR
 import yokai.presentation.core.Constants
+import yokai.presentation.manga.notes.MangaNotesController
 import yokai.util.lang.getString
 import java.io.File
 import java.io.IOException
@@ -1370,7 +1371,7 @@ class MangaDetailsController :
 
     private fun updateMenuVisibility(menu: Menu?) {
         menu ?: return
-        val editItem = menu.findItem(R.id.action_edit)
+        val editItem = menu.findItem(R.id.action_notes)?.isVisible = !presenter.isLockedFromSearch = menu.findItem(R.id.action_edit)
         editItem?.isVisible = (presenter.manga.favorite || presenter.manga.isLocal()) && !presenter.isLockedFromSearch
         menu.findItem(R.id.action_download)?.isVisible = !presenter.isLockedFromSearch &&
             !presenter.manga.isLocal()
@@ -1390,6 +1391,9 @@ class MangaDetailsController :
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.action_edit -> openEditMangaDialog()
+
+            R.id.action_notes ->
+                router.pushController(MangaNotesController(presenter.mangaId).withFadeTransaction())
 
             R.id.action_open_in_web_view -> openInWebView()
 
