@@ -14,6 +14,7 @@ import yokai.domain.category.interactor.GetCategories
 import yokai.domain.chapter.interactor.GetChapter
 import yokai.domain.history.interactor.GetHistory
 import yokai.domain.manga.interactor.GetExcludedScanlators
+import yokai.domain.manga.interactor.GetMangaNotes
 import yokai.domain.track.interactor.GetTrack
 
 class MangaBackupCreator(
@@ -24,6 +25,7 @@ class MangaBackupCreator(
     private val getHistory: GetHistory = Injekt.get(),
     private val getTrack: GetTrack = Injekt.get(),
     private val getExcludedScanlators: GetExcludedScanlators = Injekt.get(),
+    private val getMangaNotes: GetMangaNotes = Injekt.get(),
 ) {
     suspend operator fun invoke(mangas: List<Manga>, options: BackupOptions): List<BackupManga> {
         // Wrapping each chunk in a transaction keeps every query in it on the same transaction
@@ -56,6 +58,8 @@ class MangaBackupCreator(
         mangaObject.excludedScanlators = manga.id?.let { getExcludedScanlators.await(it) }
             ?.toList()
             .orEmpty()
+
+        mangaObject.notes = manga.id?.let { getMangaNotes.await(it) }.orEmpty()
 
         // Check if user wants chapter information in backup
         if (options.chapters) {

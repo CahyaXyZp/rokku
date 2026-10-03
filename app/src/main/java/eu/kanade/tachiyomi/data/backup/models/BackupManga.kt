@@ -58,6 +58,9 @@ data class BackupManga(
     @ProtoNumber(804) var customDescription: String? = null,
     @ProtoNumber(805) var customGenre: List<String>? = null,
 
+    // Same field number as Mihon's `notes` so backups are interchangeable
+    @ProtoNumber(110) var notes: String = "",
+
     // Same field number as Mihon's `memo` so backups are interchangeable
     @ProtoNumber(112) var memo: String? = null,
 ) {
