@@ -2,6 +2,7 @@ package yokai.presentation.manga.notes
 
 import android.content.Context
 import android.text.method.LinkMovementMethod
+import android.view.MotionEvent
 import android.widget.TextView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -27,13 +28,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,7 +48,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import dev.icerock.moko.resources.compose.stringResource
 import eu.kanade.tachiyomi.data.database.models.Chapter
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
-import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.toast
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.LinkResolverDef
@@ -55,8 +56,10 @@ import io.noties.markwon.MarkwonConfiguration
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tasklist.TaskListPlugin
+import io.noties.markwon.ext.tasklist.TaskListSpan
+import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.image.ImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -68,10 +71,15 @@ import yokai.i18n.MR
 import yokai.presentation.AppBarType
 import yokai.presentation.YokaiScaffold
 
-private const val AUTOSAVE_DELAY_MS = 600L
-
 @Composable
-fun MangaNotesScreen(mangaId: Long, onBack: () -> Unit) {
+fun MangaNotesScreen(
+    mangaId: Long,
+    showExitPrompt: Boolean,
+    onUnsavedChanges: (Boolean) -> Unit,
+    onExitPromptDismiss: () -> Unit,
+    onExit: () -> Unit,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val getMangaNotes = remember { Injekt.get<GetMangaNotes>() }
@@ -79,39 +87,34 @@ fun MangaNotesScreen(mangaId: Long, onBack: () -> Unit) {
     val getChapter = remember { Injekt.get<GetChapter>() }
     val getManga = remember { Injekt.get<GetManga>() }
 
-    var value by remember { mutableStateOf(TextFieldValue()) }
-    var savedText by remember { mutableStateOf("") }
-    var loaded by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf(true) }
+    // Saveable so an unsaved note survives the screen being recreated, e.g. on rotation
+    var value by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+    var savedText by rememberSaveable { mutableStateOf("") }
+    var loaded by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
     var chapters by remember { mutableStateOf(emptyList<Chapter>()) }
 
     LaunchedEffect(mangaId) {
-        val notes = getMangaNotes.await(mangaId)
         chapters = getChapter.awaitAll(mangaId, false)
-        value = TextFieldValue(notes, TextRange(notes.length))
-        savedText = notes
-        editing = notes.isBlank()
-        loaded = true
+        if (!loaded) {
+            val notes = getMangaNotes.await(mangaId)
+            value = TextFieldValue(notes, TextRange(notes.length))
+            savedText = notes
+            loaded = true
+        }
     }
 
-    // Saves shortly after the user stops typing
-    LaunchedEffect(value.text, loaded) {
-        if (!loaded || value.text == savedText) return@LaunchedEffect
-        delay(AUTOSAVE_DELAY_MS)
-        setMangaNotes.await(mangaId, value.text)
-        savedText = value.text
-    }
+    val dirty = loaded && value.text != savedText
+    SideEffect { onUnsavedChanges(dirty) }
 
-    // ...and once more when the screen goes away, in case that happens before the delay is over
-    val currentText by rememberUpdatedState(value.text)
-    val currentSavedText by rememberUpdatedState(savedText)
-    val currentLoaded by rememberUpdatedState(loaded)
-    DisposableEffect(Unit) {
-        onDispose {
-            if (currentLoaded && currentText != currentSavedText) {
-                launchIO { setMangaNotes.await(mangaId, currentText) }
-            }
+    val save: (() -> Unit) -> Unit = { afterSave ->
+        scope.launch {
+            val text = value.text
+            setMangaNotes.await(mangaId, text)
+            savedText = text
+            context.toast(MR.strings.notes_saved)
+            afterSave()
         }
     }
 
@@ -134,6 +137,9 @@ fun MangaNotesScreen(mangaId: Long, onBack: () -> Unit) {
         actions = {
             TextButton(onClick = { editing = !editing }) {
                 Text(stringResource(if (editing) MR.strings.notes_preview else MR.strings.notes_edit))
+            }
+            TextButton(onClick = { save {} }, enabled = dirty) {
+                Text(stringResource(MR.strings.notes_save))
             }
         },
     ) { padding ->
@@ -167,6 +173,9 @@ fun MangaNotesScreen(mangaId: Long, onBack: () -> Unit) {
                 NotesPreview(
                     text = value.text,
                     onChapterClick = openChapter,
+                    onToggleTask = { index ->
+                        toggleTaskItem(value.text, index)?.let { value = TextFieldValue(it, value.selection) }
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -182,6 +191,24 @@ fun MangaNotesScreen(mangaId: Long, onBack: () -> Unit) {
             onPick = { chapter ->
                 value = value.insertAtCursor(chapterTag(chapter.name, chapter.chapter_number))
                 showPicker = false
+            },
+        )
+    }
+
+    if (showExitPrompt) {
+        AlertDialog(
+            onDismissRequest = onExitPromptDismiss,
+            title = { Text(stringResource(MR.strings.notes_unsaved_title)) },
+            text = { Text(stringResource(MR.strings.notes_unsaved_message)) },
+            confirmButton = {
+                TextButton(onClick = { save { onExit() } }) {
+                    Text(stringResource(MR.strings.notes_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onExit) {
+                    Text(stringResource(MR.strings.notes_discard))
+                }
             },
         )
     }
@@ -259,8 +286,14 @@ private fun NotesToolbar(
         AssistChip(onClick = { onWrap("**") }, label = { Text("B") })
         AssistChip(onClick = { onWrap("*") }, label = { Text("I") })
         AssistChip(onClick = { onWrap("~~") }, label = { Text("S") })
+        AssistChip(onClick = { onWrap("`") }, label = { Text("</>") })
+        AssistChip(onClick = { onInsert("\n## ") }, label = { Text("H") })
+        AssistChip(onClick = { onInsert("\n> ") }, label = { Text("\"") })
         AssistChip(onClick = { onInsert("\n- ") }, label = { Text("•") })
+        AssistChip(onClick = { onInsert("\n1. ") }, label = { Text("1.") })
         AssistChip(onClick = { onInsert("\n- [ ] ") }, label = { Text("☐") })
+        AssistChip(onClick = { onInsert("\n---\n") }, label = { Text("—") })
+        AssistChip(onClick = { onInsert("\n| A | B |\n|---|---|\n|   |   |\n") }, label = { Text("▦") })
     }
 }
 
@@ -268,12 +301,14 @@ private fun NotesToolbar(
 private fun NotesPreview(
     text: String,
     onChapterClick: (Float) -> Unit,
+    onToggleTask: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
     val linkColor = MaterialTheme.colorScheme.primary.toArgb()
     val currentOnChapterClick by rememberUpdatedState(onChapterClick)
+    val currentOnToggleTask by rememberUpdatedState(onToggleTask)
     val markwon = remember(context) { buildMarkwon(context) { currentOnChapterClick(it) } }
 
     Column(
@@ -293,20 +328,61 @@ private fun NotesPreview(
                     TextView(ctx).apply {
                         textSize = 16f
                         movementMethod = LinkMovementMethod.getInstance()
+                        setOnTouchListener { view, event ->
+                            // A tap on a checkbox, which is drawn in the margin left of the item
+                            val index = if (event.action == MotionEvent.ACTION_UP) {
+                                taskIndexAt(view as TextView, event)
+                            } else {
+                                null
+                            }
+                            if (index != null) {
+                                currentOnToggleTask(index)
+                                true
+                            } else {
+                                false
+                            }
+                        }
                     }
                 },
                 update = { view ->
                     view.setTextColor(textColor)
                     view.setLinkTextColor(linkColor)
-                    markwon.setMarkdown(view, text)
+                    if (view.tag != text) {
+                        markwon.setMarkdown(view, text)
+                        view.tag = text
+                    }
                 },
             )
         }
     }
 }
 
+/**
+ * The position, in document order, of the task list item whose checkbox was tapped, or null when
+ * the tap wasn't on a checkbox.
+ */
+private fun taskIndexAt(view: TextView, event: MotionEvent): Int? {
+    val layout = view.layout ?: return null
+    val spanned = view.text as? android.text.Spanned ?: return null
+    val x = event.x - view.totalPaddingLeft + view.scrollX
+    val y = event.y - view.totalPaddingTop + view.scrollY
+    if (y < 0) return null
+
+    val line = layout.getLineForVertical(y.toInt())
+    if (x >= layout.getLineLeft(line)) return null
+
+    val lineStart = layout.getLineStart(line)
+    val lineEnd = layout.getLineEnd(line)
+    val index = spanned.getSpans(0, spanned.length, TaskListSpan::class.java)
+        .sortedBy { spanned.getSpanStart(it) }
+        .indexOfFirst { spanned.getSpanStart(it) in lineStart until lineEnd }
+    return index.takeIf { it >= 0 }
+}
+
 private fun buildMarkwon(context: Context, onChapterClick: (Float) -> Unit): Markwon =
     Markwon.builder(context)
+        .usePlugin(HtmlPlugin.create())
+        .usePlugin(ImagesPlugin.create())
         .usePlugin(StrikethroughPlugin.create())
         .usePlugin(TablePlugin.create(context))
         .usePlugin(TaskListPlugin.create(context))
