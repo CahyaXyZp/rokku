@@ -615,6 +615,13 @@
     <string name="all_read_manga">All read series</string>
     <string name="set_as_default">Set as default</string>
     <string name="filter_groups">Filter scanlator groups</string>
+    <string name="manga_notes">Notes</string>
+    <string name="notes_hint">Write your notes about this manga. Markdown is supported. Type @ to tag a chapter</string>
+    <string name="notes_edit">Edit</string>
+    <string name="notes_preview">Preview</string>
+    <string name="notes_tag_chapter">Tag chapter</string>
+    <string name="notes_empty">No notes yet</string>
+    <string name="notes_chapter_not_found">Chapter not found</string>
 
     <!-- Tracking -->
     <string name="tracking">Tracking</string>
