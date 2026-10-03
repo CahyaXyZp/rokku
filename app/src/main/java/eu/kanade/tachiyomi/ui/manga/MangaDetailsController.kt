@@ -1371,7 +1371,8 @@ class MangaDetailsController :
 
     private fun updateMenuVisibility(menu: Menu?) {
         menu ?: return
-        val editItem = menu.findItem(R.id.action_notes)?.isVisible = !presenter.isLockedFromSearch = menu.findItem(R.id.action_edit)
+        val editItem = menu.findItem(R.id.action_edit)
+        menu.findItem(R.id.action_notes)?.isVisible = !presenter.isLockedFromSearch
         editItem?.isVisible = (presenter.manga.favorite || presenter.manga.isLocal()) && !presenter.isLockedFromSearch
         menu.findItem(R.id.action_download)?.isVisible = !presenter.isLockedFromSearch &&
             !presenter.manga.isLocal()
