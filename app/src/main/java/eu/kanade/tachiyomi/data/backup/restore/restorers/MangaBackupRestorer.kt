@@ -27,8 +27,10 @@ import yokai.domain.history.interactor.UpsertHistory
 import yokai.domain.library.custom.model.CustomMangaInfo
 import yokai.domain.manga.interactor.GetExcludedScanlators
 import yokai.domain.manga.interactor.GetManga
+import yokai.domain.manga.interactor.GetMangaNotes
 import yokai.domain.manga.interactor.InsertManga
 import yokai.domain.manga.interactor.SetExcludedScanlators
+import yokai.domain.manga.interactor.SetMangaNotes
 import yokai.domain.manga.interactor.UpdateManga
 import yokai.domain.track.interactor.GetTrack
 import yokai.domain.track.interactor.InsertTrack
@@ -46,6 +48,8 @@ class MangaBackupRestorer(
     private val updateManga: UpdateManga = Injekt.get(),
     private val setExcludedScanlators: SetExcludedScanlators = Injekt.get(),
     private val getExcludedScanlators: GetExcludedScanlators = Injekt.get(),
+    private val getMangaNotes: GetMangaNotes = Injekt.get(),
+    private val setMangaNotes: SetMangaNotes = Injekt.get(),
     private val getHistory: GetHistory = Injekt.get(),
     private val upsertHistory: UpsertHistory = Injekt.get(),
     private val getTrack: GetTrack = Injekt.get(),
@@ -114,6 +118,7 @@ class MangaBackupRestorer(
                     customManga,
                 )
             }
+            restoreNotesForManga(manga, backupManga.notes)
         } catch (e: Exception) {
             onError(manga, e)
         }
@@ -339,5 +344,17 @@ class MangaBackupRestorer(
         val currentExcluded = manga.id?.let { getExcludedScanlators.await(it) }.orEmpty()
         val actualList = currentExcluded + filteredScanlators
         MangaUtil.setScanlatorFilter(setExcludedScanlators, updateManga, manga, actualList.toSet())
+    }
+
+    /**
+     * Notes are user data: a note the manga already has is kept, the backup's note only fills in
+     * when there is none.
+     */
+    private suspend fun restoreNotesForManga(manga: Manga, notes: String) {
+        if (notes.isBlank()) return
+        val mangaId = manga.id ?: return
+        if (getMangaNotes.await(mangaId).isBlank()) {
+            setMangaNotes.await(mangaId, notes)
+        }
     }
 }
