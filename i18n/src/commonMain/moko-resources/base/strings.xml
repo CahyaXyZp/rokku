@@ -620,7 +620,12 @@
     <string name="notes_edit">Edit</string>
     <string name="notes_preview">Preview</string>
     <string name="notes_tag_chapter">Tag chapter</string>
-    <string name="notes_empty">No notes yet</string>
+    <string name="notes_empty">No notes yet. Tap Edit to write one.</string>
+    <string name="notes_save">Save</string>
+    <string name="notes_saved">Notes saved</string>
+    <string name="notes_unsaved_title">Unsaved changes</string>
+    <string name="notes_unsaved_message">Save your notes before leaving?</string>
+    <string name="notes_discard">Discard</string>
     <string name="notes_chapter_not_found">Chapter not found</string>
 
     <!-- Tracking -->
