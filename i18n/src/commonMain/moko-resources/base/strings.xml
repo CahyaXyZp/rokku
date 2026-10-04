@@ -603,6 +603,7 @@
     <string name="fetch_from_tracker">Fetch details from tracker</string>
     <string name="fetch_from_tracker_done">Details fetched. Save to keep them</string>
     <string name="fetch_from_tracker_failed">Could not fetch the details from the tracker</string>
+    <string name="backups_no_limit">No limit</string>
     <string name="reset_cover">Reset cover</string>
     <string name="failed_to_update_cover">Failed to update cover</string>
     <string name="must_be_in_library_to_edit">Series must be in your library to edit</string>
