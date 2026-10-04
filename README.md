@@ -18,13 +18,6 @@ A free and open source manga reader
 
 <img src="./.github/readme-images/screens.gif" alt="Rokku screenshots" />
 
-> [!IMPORTANT]
-> **PERSONAL USE ONLY**
->
-> This repository is maintained for my personal use.
-> **Pull requests are not accepted, and issues will generally not be addressed unless they are important to me.**
->
-> Please keep this in mind before opening an issue or submitting a pull request.
 
 ## Download
 
