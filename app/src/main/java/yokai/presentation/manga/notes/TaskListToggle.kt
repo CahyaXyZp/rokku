@@ -18,7 +18,11 @@ internal fun toggleTaskItem(markdown: String, index: Int): String? {
         val fence = CODE_FENCE.find(line)
         if (fence != null) {
             val char = fence.groupValues[1].first()
-            fenceChar = if (fenceChar == null) char else if (fenceChar == char) null else fenceChar
+            fenceChar = when {
+                fenceChar == null -> char
+                fenceChar == char -> null
+                else -> fenceChar
+            }
             return@forEachIndexed
         }
         if (fenceChar != null) return@forEachIndexed
