@@ -11,4 +11,11 @@ class BackupPreferences(private val preferenceStore: PreferenceStore) {
     fun backupInterval() = preferenceStore.getInt(PreferenceKeys.backupInterval, 0)
 
     fun lastAutoBackupTimestamp() = preferenceStore.getLong(Preference.appStateKey("last_auto_backup_timestamp"), 0L)
+
+    companion object {
+        /**
+         * Value of [numberOfBackups] that keeps every automatic backup instead of deleting the older ones.
+         */
+        const val UNLIMITED_BACKUPS = 0
+    }
 }

@@ -59,11 +59,10 @@ class BackupCreator(
                 val dir = UniFile.fromUri(context, uri)
 
                 // Delete older backups
-                val numberOfBackups = backupPreferences.numberOfBackups().get()
-                dir?.listFiles { _, filename -> Backup.filenameRegex.matches(filename) }
+                val existingBackups = dir?.listFiles { _, filename -> Backup.filenameRegex.matches(filename) }
                     .orEmpty()
-                    .sortedByDescending { it.name }
-                    .drop(numberOfBackups - 1)
+                    .toList()
+                backupsToDelete(existingBackups, backupPreferences.numberOfBackups().get()) { it.name }
                     .forEach { it.delete() }
 
                 // Create new file to place backup
@@ -150,4 +149,14 @@ class BackupCreator(
 
         return extensionReposBackupCreator()
     }
+}
+
+/**
+ * The automatic backups to delete before a new one is created, oldest first by file name, so that
+ * at most [numberOfBackups] remain afterwards. Nothing is deleted when the number of backups is
+ * [BackupPreferences.UNLIMITED_BACKUPS].
+ */
+internal fun <T> backupsToDelete(backups: List<T>, numberOfBackups: Int, name: (T) -> String?): List<T> {
+    if (numberOfBackups == BackupPreferences.UNLIMITED_BACKUPS) return emptyList()
+    return backups.sortedByDescending(name).drop(numberOfBackups - 1)
 }
