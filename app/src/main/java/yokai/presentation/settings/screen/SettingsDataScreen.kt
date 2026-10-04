@@ -243,7 +243,9 @@ object SettingsDataScreen : ComposableSettings() {
                 Preference.PreferenceItem.ListPreference(
                     pref = backupPreferences.numberOfBackups(),
                     title = stringResource(MR.strings.max_auto_backups),
-                    entries = (1..5).associateWith { it.toString() }.toImmutableMap(),
+                    entries = (1..5).associateWith { it.toString() }
+                        .plus(BackupPreferences.UNLIMITED_BACKUPS to stringResource(MR.strings.backups_no_limit))
+                        .toImmutableMap(),
                     enabled = backupInterval > 0,
                 ),
                 Preference.PreferenceItem.InfoPreference(
