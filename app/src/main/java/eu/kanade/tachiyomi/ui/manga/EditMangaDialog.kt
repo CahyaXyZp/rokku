@@ -16,16 +16,26 @@ import android.view.inputmethod.InputMethodManager
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.view.isVisible
+import co.touchlab.kermit.Logger
 import coil3.load
 import coil3.request.crossfade
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.coil.useCustomCover
+import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.database.models.seriesType
+import eu.kanade.tachiyomi.data.track.TrackManager
+import eu.kanade.tachiyomi.data.track.TrackService
+import eu.kanade.tachiyomi.data.track.TrackerMangaDetails
+import eu.kanade.tachiyomi.data.track.fetchMangaDetails
+import eu.kanade.tachiyomi.data.track.supportsMangaDetails
 import eu.kanade.tachiyomi.databinding.EditMangaDialogBinding
 import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.extension.ExtensionManager
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.LocalSource
 import eu.kanade.tachiyomi.source.icon
 import eu.kanade.tachiyomi.source.model.SManga
@@ -36,22 +46,28 @@ import eu.kanade.tachiyomi.util.system.ImageUtil
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.clipboardHasImage
 import eu.kanade.tachiyomi.util.system.dpToPx
+import eu.kanade.tachiyomi.util.system.e
 import eu.kanade.tachiyomi.util.system.getClipboardImageUri
 import eu.kanade.tachiyomi.util.system.getResourceColor
 import eu.kanade.tachiyomi.util.system.isInNightMode
 import eu.kanade.tachiyomi.util.system.materialAlertDialog
+import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.withIOContext
 import eu.kanade.tachiyomi.util.view.setPositiveButton
 import eu.kanade.tachiyomi.widget.TachiyomiTextInputEditText
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.manga.interactor.GetManga
 import yokai.domain.manga.models.cover
+import yokai.domain.track.interactor.GetTrack
 import yokai.i18n.MR
 import yokai.util.coil.asTarget
 import yokai.util.coil.loadManga
 import yokai.util.lang.getString
+import java.io.File
 import android.R as AR
 
 class EditMangaDialog : DialogController {
@@ -244,6 +260,104 @@ class EditMangaDialog : DialogController {
             }
             customCoverUri = null
             willResetCover = true
+        }
+
+        if (!isLocal) {
+            setupFetchFromTracker()
+        }
+    }
+
+    /**
+     * Shows the button that fills the form with what a linked tracker knows about this manga. It
+     * only appears when the manga is linked to a tracker the user is logged in to and that can give
+     * those details. Nothing is saved until the dialog is saved, so Cancel throws it all away.
+     */
+    private fun setupFetchFromTracker() {
+        val getTrack: GetTrack = Injekt.get()
+        val trackManager: TrackManager = Injekt.get()
+        infoController.viewScope.launch {
+            val candidates = withIOContext { getTrack.awaitAllByMangaId(manga.id) }
+                .mapNotNull { track ->
+                    trackManager.getService(track.sync_id)
+                        ?.takeIf { it.isLogged && it.supportsMangaDetails() }
+                        ?.let { it to track }
+                }
+            if (candidates.isEmpty() || !binding.root.isAttachedToWindow) return@launch
+
+            binding.fetchFromTracker.isVisible = true
+            binding.fetchFromTracker.setOnClickListener {
+                if (candidates.size == 1) {
+                    val (service, track) = candidates.first()
+                    fetchFromTracker(service, track)
+                } else {
+                    val context = binding.root.context
+                    activity!!.materialAlertDialog()
+                        .setTitle(context.getString(MR.strings.fetch_from_tracker))
+                        .setItems(
+                            candidates.map { (service, _) -> context.getString(service.nameRes()) }.toTypedArray(),
+                        ) { _, which ->
+                            val (service, track) = candidates[which]
+                            fetchFromTracker(service, track)
+                        }
+                        .show()
+                }
+            }
+        }
+    }
+
+    private fun fetchFromTracker(service: TrackService, track: Track) {
+        val context = binding.root.context
+        binding.fetchFromTracker.isEnabled = false
+        infoController.viewScope.launch {
+            val details = try {
+                service.fetchMangaDetails(track)
+            } catch (e: Exception) {
+                Logger.e(e) { "Unable to fetch manga details from the tracker" }
+                null
+            }
+            if (!binding.root.isAttachedToWindow) return@launch
+
+            binding.fetchFromTracker.isEnabled = true
+            if (details == null) {
+                context.toast(MR.strings.fetch_from_tracker_failed)
+                return@launch
+            }
+            applyTrackerDetails(details)
+            context.toast(MR.strings.fetch_from_tracker_done)
+        }
+    }
+
+    private suspend fun applyTrackerDetails(details: TrackerMangaDetails) {
+        details.author?.let { binding.mangaAuthor.setText(it) }
+        details.artist?.let { binding.mangaArtist.setText(it) }
+        details.description?.let { binding.mangaDescription.setText(it) }
+        details.status?.let { binding.mangaStatus.setSelection(it.coerceIn(SManga.UNKNOWN, SManga.ON_HIATUS)) }
+        if (details.genres.isNotEmpty()) {
+            setGenreTags(details.genres)
+            binding.seriesType.setSelection(manga.seriesType(customTags = details.genres.joinToString(", ")) - 1)
+        }
+        details.coverUrl?.let { downloadCover(it) }
+    }
+
+    private suspend fun downloadCover(url: String) {
+        val file = try {
+            withIOContext {
+                val network: NetworkHelper = Injekt.get()
+                network.client.newCall(GET(url)).await().use { response ->
+                    if (!response.isSuccessful) return@withIOContext null
+                    File(binding.root.context.cacheDir, "tracker_cover_${manga.id}").also { file ->
+                        response.body.byteStream().use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Logger.e(e) { "Unable to download the cover from the tracker" }
+            null
+        }
+        if (file != null && binding.root.isAttachedToWindow) {
+            updateCover(Uri.fromFile(file))
         }
     }
 
