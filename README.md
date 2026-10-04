@@ -18,10 +18,18 @@ A free and open source manga reader
 
 <img src="./.github/readme-images/screens.gif" alt="Rokku screenshots" />
 
+> [!IMPORTANT]
+> **PERSONAL USE ONLY**
+>
+> This repository is maintained for my personal use.
+> **Pull requests are not accepted, and issues will generally not be addressed unless they are important to me.**
+>
+> Please keep this in mind before opening an issue or submitting a pull request.
+
 ## Download
 
 [![Rokku Stable](https://img.shields.io/github/v/release/rokku-app/rokku?maxAge=3600&label=Stable&labelColor=06599d&color=043b69&filter=v*)](https://github.com/rokku-app/rokku/releases)
-[![Rokku Nightly](https://img.shields.io/github/v/release/rokku-app/rokku-nightly?maxAge=3600&label=Nightly&labelColor=2c2c47&color=1c1c39&include_prereleases)](https://github.com/rokku-app/rokku-nightly/releases)
+[![Rokku Nightly](https://img.shields.io/github/v/release/rokku-app/rokku-nightly?maxAge=3600&label=Nightly&labelColor=2c2c47&include_prereleases)](https://github.com/rokku-app/rokku-nightly/releases)
 
 *Requires Android 8.0 or higher.*
 
@@ -29,7 +37,7 @@ A free and open source manga reader
 
 Rokku is a fork of [Yokai](https://github.com/null2264/yokai), which is itself a fork of [TachiyomiJ2K](https://github.com/Jays2Kings/tachiyomiJ2K) and [Mihon](https://github.com/mihonapp/mihon) (formerly Tachiyomi).
 
-**This fork is maintained for personal use. Bugs and issues will not be fixed unless they are critical to this fork.**
+**This fork is maintained for personal use. Pull requests are not accepted, and issues will generally not be addressed unless they are important to me.**
 
 ## Features
 
@@ -115,7 +123,7 @@ Rokku is a fork of [Yokai](https://github.com/null2264/yokai), which is itself a
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+This fork is maintained for personal use. Pull requests are not accepted. Please do not open issues unless they are important to me.
 
 <div align="left">
 
