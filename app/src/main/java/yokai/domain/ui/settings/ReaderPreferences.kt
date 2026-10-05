@@ -50,4 +50,25 @@ class ReaderPreferences(private val preferenceStore: PreferenceStore) {
     fun debugMode() = preferenceStore.getBoolean("pref_enable_reader_debug_mode", BuildConfig.DEBUG)
 
     fun autoScrollSpeed() = preferenceStore.getInt("reader_auto_scroll_speed", 50)
+
+    /** Daily reading limit in minutes, 0 means the break reminder is off. */
+    fun maxReadTime() = preferenceStore.getInt("reader_max_read_time", 0)
+
+    /** Minutes after midnight the sleep reminder starts at, -1 means the sleep reminder is off. */
+    fun sleepReminderTime() = preferenceStore.getInt("reader_sleep_reminder_time", -1)
+
+    fun readingReminderDay() = preferenceStore.getString("reader_reminder_day", "")
+
+    fun readTodayMs() = preferenceStore.getLong("reader_read_today_ms", 0L)
+
+    fun readLimitExtraMs() = preferenceStore.getLong("reader_read_limit_extra_ms", 0L)
+
+    fun breakReminderDismissed() = preferenceStore.getBoolean("reader_break_reminder_dismissed", false)
+
+    fun sleepSnoozeUntil() = preferenceStore.getLong("reader_sleep_snooze_until", 0L)
+
+    fun sleepDismissedNight() = preferenceStore.getString("reader_sleep_dismissed_night", "")
+
+    /** The reminder the user chose to stop reading for, shown again as a dialog on the next app launch. */
+    fun pendingStopReminder() = preferenceStore.getString("reader_pending_stop_reminder", "")
 }
