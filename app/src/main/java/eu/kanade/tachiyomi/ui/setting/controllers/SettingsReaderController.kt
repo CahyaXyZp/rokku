@@ -200,6 +200,8 @@ class SettingsReaderController : SettingsLegacyController() {
             }
         }
 
+        readingReminderCategory(activity)
+
         preferenceCategory {
             titleRes = MR.strings.paged
 

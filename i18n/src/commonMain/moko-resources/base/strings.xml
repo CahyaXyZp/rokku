@@ -555,6 +555,23 @@
     <string name="auto_scroll">Auto-scroll</string>
     <string name="auto_scroll_speed">Auto-scroll speed</string>
     <string name="auto_scroll_start">Start</string>
+    <string name="reading_reminder">Reading reminder</string>
+    <string name="max_read_time">Max read time</string>
+    <string name="sleep_reminder">Sleep reminder</string>
+    <string name="reading_reminder_info">Reading time is counted per day while the reader is open. The sleep reminder starts at the chosen time and stays active for 6 hours.</string>
+    <string name="reading_reminder_minutes">%1$d minutes</string>
+    <string name="reading_reminder_hours">%1$d hours</string>
+    <string name="reading_reminder_break_message">You\'ve been reading for a long time. Time for a break?</string>
+    <string name="reading_reminder_sleep_message">It\'s getting late. Time to get some sleep?</string>
+    <string name="reading_reminder_stop">Stop Reading</string>
+    <string name="reading_reminder_add_time">Add Time</string>
+    <string name="reading_reminder_continue">Continue Reading</string>
+    <string name="reading_reminder_add_time_title">Add how much time?</string>
+    <string name="reading_reminder_add_15">15 minutes</string>
+    <string name="reading_reminder_add_30">30 minutes</string>
+    <string name="reading_reminder_add_60">1 hour</string>
+    <string name="reading_reminder_stop_dialog_title">Time to stop reading</string>
+    <string name="reading_reminder_stop_dialog_message">You chose to stop reading earlier. Close the app and take a rest, or continue if you really need to.</string>
     <string name="auto_scroll_stop">Stop</string>
 
     <!-- Manga details -->

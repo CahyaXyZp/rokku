@@ -263,6 +263,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private val readerPreferences: ReaderPreferences by injectLazy()
     private val basePreferences: BasePreferences by injectLazy()
     private val autoScroller by lazy { ReaderAutoScroller(this) }
+    private val readingReminder by lazy { ReaderReadingReminder(this) }
 
     companion object {
 
@@ -1353,6 +1354,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         }
     }
 
+    fun stopAutoScroll() = autoScroller.stop()
+
     fun hideMenu() {
         if (menuVisible && !isScrollingThroughPagesOrChapters) {
             setMenuVisibility(false)
@@ -1515,6 +1518,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
 
     override fun onPause() {
         autoScroller.stop()
+        readingReminder.stop()
         viewModel.flushReadTimer()
         DiscordRPCService.scheduleStop(this, viewModel.manga?.id)
         super.onPause()
@@ -1523,6 +1527,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
+        readingReminder.start()
         if (!DiscordRPCService.resumeReading(viewModel.manga?.id)) {
             DiscordRPCService.start(this, sourceId = viewModel.manga?.source)
         }
