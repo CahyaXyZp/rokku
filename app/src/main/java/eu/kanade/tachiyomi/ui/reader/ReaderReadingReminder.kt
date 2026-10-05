@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
@@ -12,9 +13,11 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.getResourceColor
 import eu.kanade.tachiyomi.util.system.materialAlertDialog
@@ -126,9 +129,9 @@ class ReaderReadingReminder(private val activity: ReaderActivity) {
         activity.stopAutoScroll()
         activity.hideMenu()
 
-        val surface = activity.getResourceColor(com.google.android.material.R.attr.colorSurfaceInverse)
-        val onSurface = activity.getResourceColor(com.google.android.material.R.attr.colorOnSurfaceInverse)
-        val accent = activity.getResourceColor(com.google.android.material.R.attr.colorPrimaryInverse)
+        val surface = activity.getResourceColor(R.attr.colorPrimaryVariant)
+        val onSurface = activity.getResourceColor(R.attr.colorOnSurface)
+        val accent = activity.getResourceColor(R.attr.colorSecondary)
 
         val message = TextView(activity).apply {
             text = activity.getString(
@@ -174,6 +177,8 @@ class ReaderReadingReminder(private val activity: ReaderActivity) {
             radius = 12.dpToPx.toFloat()
             cardElevation = 6.dpToPx.toFloat()
             setCardBackgroundColor(surface)
+            strokeWidth = 1.dpToPx
+            strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(onSurface, STROKE_ALPHA)).defaultColor
             addView(content)
         }
 
@@ -259,6 +264,7 @@ class ReaderReadingReminder(private val activity: ReaderActivity) {
         private const val SLEEP_WINDOW_MINUTES = 6 * MINUTES_PER_HOUR
         private const val KILL_DELAY_MS = 500L
         private const val SCRIM_COLOR = 0x66000000
+        private const val STROKE_ALPHA = 31
 
         private fun dayKey(calendar: Calendar): String = String.format(
             Locale.ROOT,
