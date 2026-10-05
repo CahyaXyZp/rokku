@@ -10,6 +10,11 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+### Additions
+- Added Notes for each manga: a "Notes" item in the manga details menu opens a personal note that starts in a markdown preview (headings, bold, italic, strikethrough, lists, tables, quotes, code, links, images and basic HTML tags). Checkboxes (`- [ ]`) can be tapped to check them off, and typing `@` or using "Tag chapter" inserts a link that opens that chapter in the reader. Notes are saved manually, with a prompt before leaving unsaved changes, and are included in backups using the same field as Mihon
+- Added a "Fetch details from tracker" button to the manga edit dialog: when the manga is linked to AniList or MyAnimeList, it fills in the author, artist, description, status, genres and cover from the tracker. Nothing is saved until you save the dialog
+- Added a "No limit" option for the maximum number of automatic backups, which keeps every backup instead of deleting the oldest ones
+
 ## [1.8.0]
 
 ### Additions
