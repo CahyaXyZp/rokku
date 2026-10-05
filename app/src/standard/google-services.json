@@ -61,6 +61,63 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:34644135772:android:c75d0fb50007903a687b99",
+        "android_client_info": {
+          "package_name": "app.rokku.fork"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJAMQh-dbYGcZdKt0Z60OOfs5lnG_ofwk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:34644135772:android:6a41730932bb717a687b99",
+        "android_client_info": {
+          "package_name": "app.rokku.fork.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJAMQh-dbYGcZdKt0Z60OOfs5lnG_ofwk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:34644135772:android:0d3d310207555af2687b99",
+        "android_client_info": {
+          "package_name": "app.rokku.fork.nightly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJAMQh-dbYGcZdKt0Z60OOfs5lnG_ofwk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
