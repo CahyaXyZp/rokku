@@ -14,6 +14,10 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Added Notes for each manga: a "Notes" item in the manga details menu opens a personal note that starts in a markdown preview (headings, bold, italic, strikethrough, lists, tables, quotes, code, links, images and basic HTML tags). Checkboxes (`- [ ]`) can be tapped to check them off, and typing `@` or using "Tag chapter" inserts a link that opens that chapter in the reader. Notes are saved manually, with a prompt before leaving unsaved changes, and are included in backups using the same field as Mihon
 - Added a "Fetch details from tracker" button to the manga edit dialog: when the manga is linked to AniList or MyAnimeList, it fills in the author, artist, description, status, genres and cover from the tracker. Nothing is saved until you save the dialog
 - Added a "No limit" option for the maximum number of automatic backups, which keeps every backup instead of deleting the oldest ones
+- Added reading reminders (Settings > Reader): a daily maximum read time and a sleep reminder time. When either is reached, a banner at the top of the reader blocks reading until you choose Stop Reading, Add Time (15 minutes, 30 minutes or 1 hour) or Continue Reading, which silences that reminder for the rest of the day or night. Stop Reading closes the app, and the next launch asks whether to stop or continue
+
+### Changes
+- Renamed the app to RokkuFork and changed the application ID to `app.rokku.fork` (`app.rokku.fork.debug` and `app.rokku.fork.nightly` for those builds), so it no longer shares an identity with the upstream app. It installs as a separate app, so move your data over with a backup and restore
 
 ## [1.8.0]
 
