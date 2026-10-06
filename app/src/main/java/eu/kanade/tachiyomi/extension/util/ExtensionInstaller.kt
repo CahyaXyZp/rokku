@@ -75,6 +75,12 @@ internal class ExtensionInstaller(private val context: Context) {
     val activeDownloads = hashMapOf<String, Long>()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * Ids of downloads whose completion was already handled, so the completion broadcast and the
+     * status polling can both report it without installing the extension twice.
+     */
+    private val handledDownloads = mutableSetOf<Long>()
+
     private var installer: ShizukuInstaller? = null
 
     private val shizukuInstaller: ShizukuInstaller?
@@ -205,6 +211,9 @@ internal class ExtensionInstaller(private val context: Context) {
      * that same status forever, so without our own stall check the flow -- and the "Downloading"
      * UI state -- would just hang indefinitely with no way for the user to retry.
      *
+     * When the download finishes successfully the install is started from here as well, in case
+     * the completion broadcast never reaches [DownloadCompletionReceiver].
+     *
      * @param id The id of the download to poll.
      */
     @SuppressLint("Range")
@@ -256,6 +265,10 @@ internal class ExtensionInstaller(private val context: Context) {
                     DownloadManager.STATUS_PENDING -> InstallStep.Pending
                     DownloadManager.STATUS_RUNNING -> InstallStep.Downloading
                     DownloadManager.STATUS_PAUSED, DownloadManager.STATUS_FAILED -> InstallStep.Error
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        handleCompletedDownload(id)
+                        return@flatMapConcat emptyFlow()
+                    }
                     else -> return@flatMapConcat emptyFlow()
                 }
                 flowOf(ExtensionIntallInfo(step, null))
@@ -295,6 +308,49 @@ internal class ExtensionInstaller(private val context: Context) {
                 deleteDownload(pkgName)
                 emit(InstallStep.Done to null)
             }
+    }
+
+    /**
+     * Starts the installation of a finished download. Called both by the completion broadcast and
+     * by the status polling, whichever notices the finished download first; the other call is
+     * ignored.
+     *
+     * @param id The id of the finished download.
+     */
+    @SuppressLint("Range")
+    private fun handleCompletedDownload(id: Long) {
+        val pkgName = activeDownloads.entries.find { id == it.value }?.key ?: return
+        val firstCall = synchronized(handledDownloads) { handledDownloads.add(id) }
+        if (!firstCall) return
+
+        val query = DownloadManager.Query().setFilterById(id)
+        downloadManager.query(query).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                Logger.e { "Downloaded extension row was unavailable" }
+                emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Error, null))
+                return
+            }
+
+            val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+            val reason = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON))
+            val localUri = completedDownloadUri(
+                status,
+                cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)),
+            )
+            if (localUri == null) {
+                Logger.e { "Couldn't locate downloaded APK: status=$status reason=$reason" }
+                emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Error, null))
+                return
+            }
+
+            emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Loading, null))
+            try {
+                installApk(id, File(localUri.removePrefix(FILE_SCHEME)).getUriCompat(context))
+            } catch (e: Exception) {
+                Logger.e(e) { "Failed to start the extension installation" }
+                emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Error, null))
+            }
+        }
     }
 
     /**
@@ -446,6 +502,7 @@ internal class ExtensionInstaller(private val context: Context) {
     private fun deleteDownload(pkgName: String) {
         val downloadId = activeDownloads.remove(pkgName)
         if (downloadId != null) {
+            synchronized(handledDownloads) { handledDownloads.remove(downloadId) }
             downloadManager.remove(downloadId)
         }
         ExtensionInstallerJob.removeActiveInstall(pkgName)
@@ -493,37 +550,13 @@ internal class ExtensionInstaller(private val context: Context) {
          * Called when a download event is received. It looks for the download in the current active
          * downloads and notifies its installation step.
          */
-        @SuppressLint("Range")
         override fun onReceive(context: Context, intent: Intent?) {
             val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0) ?: return
 
             // Avoid events for downloads we didn't request
             if (id !in activeDownloads.values) return
 
-            val pkgName = activeDownloads.entries.find { id == it.value }?.key ?: return
-            val query = DownloadManager.Query().setFilterById(id)
-            downloadManager.query(query).use { cursor ->
-                if (!cursor.moveToFirst()) {
-                    Logger.e { "Downloaded extension row was unavailable" }
-                    emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Error, null))
-                    return
-                }
-
-                val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
-                val reason = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON))
-                val localUri = completedDownloadUri(
-                    status,
-                    cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)),
-                )
-                if (localUri == null) {
-                    Logger.e { "Couldn't locate downloaded APK: status=$status reason=$reason" }
-                    emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Error, null))
-                    return
-                }
-
-                emitToFlow(pkgName, ExtensionIntallInfo(InstallStep.Loading, null))
-                installApk(id, File(localUri.removePrefix(FILE_SCHEME)).getUriCompat(context))
-            }
+            handleCompletedDownload(id)
         }
     }
 
