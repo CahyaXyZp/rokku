@@ -26,6 +26,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Made the status bar transparent instead of theme-colored, matching upstream (only visible on Android versions predating edge-to-edge enforcement)
 - Adjusted the accent color of the Tachiyomi, Flat Lime, Strawberries, and Yotsuba themes to match upstream
 - Fixed the Popular/Latest/Filter buttons in Browse rendering in the accent color instead of a neutral one
+- Fixed the switch thumb and checkmark being white in the Chocolate Strawberries theme instead of dark like the other dark themes
 - Fixed several dark themes showing white instead of black text/checkmarks on unread badges, checkboxes, filter chips, selected tabs, and default buttons, caused by using the accent color's own text color (`colorOnSecondary`) instead of the correctly calibrated `colorOnPrimary`
 - Fixed the manga details screen's unmarked "Add to Library"/"Tracking" buttons and the "More" fade-out keeping the plain theme background instead of the cover-based page tint, leaving a visible seam when "Theme background based on cover" was on
 - Fixed cool-hued covers (blue/cyan/green) barely tinting the manga details page compared to warm ones, caused by HSL's saturation not being perceptually uniform across hues; the cover-tint blend now uses HCT instead
