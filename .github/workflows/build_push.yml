@@ -4,7 +4,7 @@
 # again when this workflow pushes its own tag, publishing a duplicate release - so don't add one.
 name: Build app
 
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build and Release v{0}', github.event.inputs.version) || github.event.commits[0].message }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build and Release v{0}', github.event.inputs.version) || '' }}
 
 on:
   push:
