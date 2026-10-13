@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.database.models.isOneShotOrCompleted
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -100,7 +101,7 @@ abstract class TrackService(val id: Long) {
     abstract suspend fun login(username: String, password: String): Boolean
 
     /**
-     * Services with re-fetch the user profile from their API here
+     * Services re-fetch the user profile from their API here
      * and update the settings that depend on it (display name, scoring type...).
      */
     protected open suspend fun updateUserConfig() {}
@@ -110,6 +111,8 @@ abstract class TrackService(val id: Long) {
         try {
             updateUserConfig()
             _refreshResultFlow.emit(RefreshResult.Success)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             _refreshResultFlow.emit(RefreshResult.Error(e))
         } finally {

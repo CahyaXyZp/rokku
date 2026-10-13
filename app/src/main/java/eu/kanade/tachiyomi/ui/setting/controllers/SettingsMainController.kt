@@ -86,7 +86,7 @@ class SettingsMainController : SettingsLegacyController(), FloatingSearchInterfa
             onClick { navigateTo(SettingsTrackingController()) }
             onLongClick {
                 navigateTo(SettingsTrackingLegacyController())
-                context.toast("You're entering experimental version of 'Tracking'")
+                context.toast(MR.strings.tracking_legacy_notice)
             }
         }
         preference {

@@ -17,6 +17,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Added an option to group the manga details chapter list into rounded cards like TachiyomiJ2K, tinted with the cover's color when the cover theme is on (off by default, under Settings > Appearance > Details page > Group chapters into cards) ([@Hiirbaf](https://github.com/Hiirbaf))
 - Added an option to tint switch tracks and outlines with each theme's color instead of a neutral gray (off by default, under Settings > Appearance > Tint switches and outlines with theme color) ([@Hiirbaf](https://github.com/Hiirbaf))
 - Added a page transition effect (Slide, Fade, Depth, Zoom out) and speed for the paged reader, in the reader settings next to Animate page transitions
+- Added a new Compose tracking settings screen that shows the logged-in account name under each tracker and a refresh button to re-fetch the profile and scoring type (the previous screen is still available by long-pressing Tracking in Settings). Kitsu now supports its simple, regular and advanced rating systems, tracker search results show the score, and Bangumi search now only lists manga ([@Sacha1016](https://github.com/Sacha1016))
 
 ### Changes
 - The Doki, Dark (default) and Flat Lime themes now tint switch tracks and outlines with their own colors when "Tint switches and outlines" is on, instead of a generic gray

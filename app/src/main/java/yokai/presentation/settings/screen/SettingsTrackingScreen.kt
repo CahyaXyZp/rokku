@@ -1,26 +1,29 @@
 package yokai.presentation.settings.screen
 
-import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
@@ -29,15 +32,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.icerock.moko.resources.StringResource
@@ -53,19 +59,18 @@ import eu.kanade.tachiyomi.data.track.mangabaka.MangaBakaApi
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeListApi
 import eu.kanade.tachiyomi.data.track.shikimori.ShikimoriApi
 import eu.kanade.tachiyomi.source.SourceManager
-import eu.kanade.tachiyomi.util.system.launchIO
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toast
-import eu.kanade.tachiyomi.util.system.withUIContext
+import eu.kanade.tachiyomi.util.system.withIOContext
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.injectLazy
 import yokai.i18n.MR
+import yokai.presentation.component.LoadingButton
 import yokai.presentation.component.preference.Preference
 import yokai.presentation.settings.ComposableSettings
 import yokai.util.lang.getString
+import kotlin.math.ln
 
 object SettingsTrackingScreen : ComposableSettings() {
 
@@ -78,7 +83,7 @@ object SettingsTrackingScreen : ComposableSettings() {
     @Composable
     override fun RowScope.AppBarAction() {
         val uriHandler = LocalUriHandler.current
-        IconButton(onClick = { uriHandler.openUri("https://mihon.app/docs/guides/tracking") }) {
+        IconButton(onClick = { uriHandler.openUri("https://rokku-app.github.io/docs/guides/tracking") }) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                 contentDescription = null,
@@ -89,7 +94,6 @@ object SettingsTrackingScreen : ComposableSettings() {
     @Composable
     override fun getPreferences(): List<Preference> {
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
         val preferences: PreferencesHelper by injectLazy()
         val trackManager: TrackManager by injectLazy()
         val sourceManager: SourceManager by injectLazy()
@@ -104,6 +108,7 @@ object SettingsTrackingScreen : ComposableSettings() {
                 dialog = null
                 refresh++
             }
+
             is LogoutDialog -> TrackingLogoutDialog(d.tracker) {
                 dialog = null
                 refresh++
@@ -186,6 +191,11 @@ object SettingsTrackingScreen : ComposableSettings() {
         )
     }
 
+    /**
+     * Mirrors the legacy login dialog (pref_account_login.xml): centered title, two outlined
+     * fields and a single loading button, with no cancel button.
+     */
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun TrackingLoginDialog(
         tracker: TrackService,
@@ -197,95 +207,109 @@ object SettingsTrackingScreen : ComposableSettings() {
         var username by remember { mutableStateOf(tracker.getUsername()) }
         var password by remember { mutableStateOf(tracker.getPassword()) }
         var processing by remember { mutableStateOf(false) }
-        var inputError by remember { mutableStateOf(false) }
+        var failed by remember { mutableStateOf(false) }
         var hidePassword by remember { mutableStateOf(true) }
 
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = {
-                Text(text = stringResource(MR.strings.log_in_to_, stringResource(tracker.nameRes())))
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text(text = stringResource(uNameStringRes)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        isError = inputError && !processing,
-                    )
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text(text = stringResource(MR.strings.password)) },
-                        singleLine = true,
-                        visualTransformation = if (hidePassword) {
-                            PasswordVisualTransformation()
-                        } else {
-                            VisualTransformation.None
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { hidePassword = !hidePassword }) {
-                                Icon(
-                                    imageVector = if (hidePassword) {
-                                        Icons.Rounded.Visibility
-                                    } else {
-                                        Icons.Rounded.VisibilityOff
-                                    },
-                                    contentDescription = null,
-                                )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done,
-                        ),
-                        isError = inputError && !processing,
-                    )
+        fun login() {
+            if (username.isBlank() || password.isBlank()) {
+                failed = true
+                context.toast(MR.strings.username_must_not_be_blank)
+                return
+            }
+            scope.launch {
+                processing = true
+                failed = false
+                try {
+                    if (withIOContext { tracker.login(username, password) }) {
+                        context.toast(MR.strings.successfully_logged_in)
+                        onDismissRequest()
+                    } else {
+                        tracker.logout()
+                        failed = true
+                    }
+                } catch (e: Exception) {
+                    tracker.logout()
+                    failed = true
+                    e.message?.let { context.toast(it) }
+                } finally {
+                    processing = false
                 }
-            },
-            confirmButton = {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !processing && username.isNotBlank() && password.isNotBlank(),
-                    onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            processing = true
-                            val ok = checkLogin(context, tracker, username, password)
-                            inputError = !ok
-                            if (ok) onDismissRequest()
-                            processing = false
+            }
+        }
+
+        val fieldColors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+            cursorColor = MaterialTheme.colorScheme.secondary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        )
+
+        LegacyStyledDialog(
+            onDismissRequest = onDismissRequest,
+            dismissible = !processing,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    text = stringResource(MR.strings.log_in_to_, stringResource(tracker.nameRes())),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                OutlinedTextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 15.dp),
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text(text = stringResource(uNameStringRes)) },
+                    singleLine = true,
+                    colors = fieldColors,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                )
+                OutlinedTextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(text = stringResource(MR.strings.password)) },
+                    singleLine = true,
+                    colors = fieldColors,
+                    visualTransformation = if (hidePassword) {
+                        PasswordVisualTransformation()
+                    } else {
+                        VisualTransformation.None
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { hidePassword = !hidePassword }) {
+                            Icon(
+                                imageVector = if (hidePassword) {
+                                    Icons.Rounded.Visibility
+                                } else {
+                                    Icons.Rounded.VisibilityOff
+                                },
+                                contentDescription = null,
+                            )
                         }
                     },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = stringResource(if (processing) MR.strings.loading else MR.strings.log_in))
+                    val buttonText = stringResource(if (failed) MR.strings.unknown_error else MR.strings.log_in)
+                    LoadingButton(
+                        text = { buttonText },
+                        loading = { processing },
+                        onClick = ::login,
+                    )
                 }
-            },
-        )
-    }
-
-    private suspend fun checkLogin(
-        context: Context,
-        tracker: TrackService,
-        username: String,
-        password: String,
-    ): Boolean {
-        return try {
-            val ok = tracker.login(username, password)
-            if (!ok) {
-                tracker.logout()
-                withContext(Dispatchers.Main) { context.toast(context.getString(MR.strings.unknown_error)) }
-                return false
             }
-            withContext(Dispatchers.Main) { context.toast(context.getString(MR.strings.successfully_logged_in)) }
-            true
-        } catch (e: Throwable) {
-            tracker.logout()
-            withContext(Dispatchers.Main) { context.toast(e.message.toString()) }
-            false
         }
     }
 
@@ -296,40 +320,70 @@ object SettingsTrackingScreen : ComposableSettings() {
     ) {
         val context = LocalContext.current
 
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = {
+        LegacyStyledDialog(onDismissRequest = onDismissRequest) {
+            Column(modifier = Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 14.dp)) {
                 Text(
                     text = stringResource(MR.strings.log_out_from_, stringResource(tracker.nameRes())),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.headlineSmall,
                 )
-            },
-            confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismissRequest,
-                    ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 30.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismissRequest) {
                         Text(text = stringResource(MR.strings.cancel))
                     }
-                    Button(
-                        modifier = Modifier.weight(1f),
+                    TextButton(
                         onClick = {
                             tracker.logout()
                             onDismissRequest()
-                            context.toast(context.getString(MR.strings.successfully_logged_out))
+                            context.toast(MR.strings.successfully_logged_out)
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
                     ) {
                         Text(text = stringResource(MR.strings.log_out))
                     }
                 }
-            },
-        )
+            }
+        }
+    }
+
+    /**
+     * Compose counterpart of the legacy MaterialAlertDialog (Theme.Widget.Yokai.AlertDialog):
+     * 10dp background inset, 28dp corners, 95% of the width in portrait (65% in landscape) and a
+     * colorSurface background with a colorSecondary elevation overlay at the M3 dialog elevation (6dp).
+     */
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun LegacyStyledDialog(
+        onDismissRequest: () -> Unit,
+        dismissible: Boolean = true,
+        content: @Composable () -> Unit,
+    ) {
+        val configuration = LocalConfiguration.current
+        val widthFraction = if (configuration.screenWidthDp > configuration.screenHeightDp) 0.65f else 0.95f
+        val overlayAlpha = (4.5f * ln(6f + 1f) + 2f) / 100f
+        val colors = MaterialTheme.colorScheme
+
+        BasicAlertDialog(
+            onDismissRequest = onDismissRequest,
+            properties = DialogProperties(
+                dismissOnBackPress = dismissible,
+                dismissOnClickOutside = dismissible,
+                usePlatformDefaultWidth = false,
+            ),
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(widthFraction)
+                    .padding(10.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = colors.secondary.copy(alpha = overlayAlpha).compositeOver(colors.surface),
+                contentColor = colors.onSurface,
+                content = content,
+            )
+        }
     }
 }
 
