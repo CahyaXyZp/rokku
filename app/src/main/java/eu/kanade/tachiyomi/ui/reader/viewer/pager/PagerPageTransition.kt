@@ -58,7 +58,9 @@ object PagerPageTransition {
                 val leavingPosition = if (leavingIsNegative) position else -position
                 when {
                     abs(position) >= OFF_SCREEN_THRESHOLD -> page.applyTransform(isHorizontal, alpha = 0f)
+
                     leavingPosition <= 0f -> page.applyTransform(isHorizontal)
+
                     else -> page.applyTransform(
                         isHorizontal,
                         alpha = 1f - leavingPosition,
