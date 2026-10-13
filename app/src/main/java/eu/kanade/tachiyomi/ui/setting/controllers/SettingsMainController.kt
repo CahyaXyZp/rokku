@@ -108,7 +108,7 @@ class SettingsMainController : SettingsLegacyController(), FloatingSearchInterfa
             onClick { navigateTo(SettingsAdvancedLegacyController()) }
             onLongClick {
                 navigateTo(SettingsAdvancedController())
-                context.toast("You're entering experimental version of 'Advanced'")
+                context.toast(MR.strings.advanced_experimental_notice)
             }
         }
         preference {
