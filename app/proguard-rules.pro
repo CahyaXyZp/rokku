@@ -123,3 +123,8 @@
     public <init>();
     public void destroy();
 }
+
+# Replaced through reflection to control the page transition speed
+-keepclassmembers class androidx.viewpager.widget.DirectionalViewPager {
+    private android.widget.Scroller mScroller;
+}

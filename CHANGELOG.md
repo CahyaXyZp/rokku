@@ -16,6 +16,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Browse and Global Search now keep a recent search history and let you save searches (scoped to one source or all sources), with incognito-aware suggestions ([@Hiirbaf](https://github.com/Hiirbaf))
 - Added an option to group the manga details chapter list into rounded cards like TachiyomiJ2K, tinted with the cover's color when the cover theme is on (off by default, under Settings > Appearance > Details page > Group chapters into cards) ([@Hiirbaf](https://github.com/Hiirbaf))
 - Added an option to tint switch tracks and outlines with each theme's color instead of a neutral gray (off by default, under Settings > Appearance > Tint switches and outlines with theme color) ([@Hiirbaf](https://github.com/Hiirbaf))
+- Added a page transition effect (Slide, Fade, Depth, Zoom out) and speed for the paged reader, in the reader settings next to Animate page transitions
 
 ### Changes
 - The Doki, Dark (default) and Flat Lime themes now tint switch tracks and outlines with their own colors when "Tint switches and outlines" is on, instead of a generic gray
