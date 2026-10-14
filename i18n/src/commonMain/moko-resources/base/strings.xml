@@ -123,6 +123,7 @@
     <string name="updating_">Updating %1$s</string>
     <string name="update_available">Update available</string>
     <string name="new_version_available">New version available!</string>
+    <string name="skip_this_version">Skip this version</string>
     <string name="new_beta_version_available">New beta version available!</string>
     <string name="no_new_updates_available">No new updates available</string>
     <string name="searching_for_updates">Searching for updates…</string>
@@ -440,6 +441,8 @@
     <string name="show_page_number">Show page number</string>
     <string name="true_32bit_color">32-bit color</string>
     <string name="page_preload_amount">Page preload amount</string>
+    <string name="preload_only_on_wifi">Preload only on Wi-Fi</string>
+    <string name="preload_only_on_wifi_summary">Saves mobile data by loading only the page you're reading while on a metered connection</string>
     <string name="amount_of_pages_to_preload">The amount of pages to preload when reading. Higher values will result in a smoother reading experience, at the cost of higher cache and network usage</string>
     <string name="reduces_banding_impacts_performance">Reduces banding, but may impact
         performance</string>
