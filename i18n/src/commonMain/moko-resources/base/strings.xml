@@ -1131,6 +1131,8 @@
     <string name="please_update_webview">Please update the WebView app for better compatibility</string>
     <string name="information_webview_required">WebView is required for the app to function</string>
     <!-- Do not translate "WebView" -->
+    <string name="information_webview_crashed">WebView stopped working and the page was closed</string>
+    <!-- Do not translate "WebView" -->
     <string name="webview_is_required">WebView is required for Tachiyomi</string>
     <string name="action_webview_back">Back</string>
     <string name="action_webview_forward">Forward</string>

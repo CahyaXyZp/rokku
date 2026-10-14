@@ -72,6 +72,13 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed the webtoon reader leaving a gap after zooming in once the window had been resized (split-screen, foldables), caused by only measuring its height once
 - Fixed Global Search (and the migration search) occasionally dropping a source's results from the list when several sources finished searching at nearly the same time
 - Fixed a download notification occasionally showing a leftover error's styling or category after a warning, pause, or new download, caused by all download notification states sharing one builder
+- Added missing R8 keep rules for the default methods of the source interfaces (`Source`, `CatalogueSource`, `ConfigurableSource`), which release builds could strip and crash extensions compiled the older way that call them
+- Fixed cancelling one extension install also cancelling the install of another extension that was in progress
+- Fixed pausing and resuming downloads quickly leaving duplicate page files ("(1)") and failed chapters, because the new download job started while the cancelled one was still writing pages
+- Fixed the app closing when a WebView's renderer process died, in the in-app WebView and during Cloudflare checks (now the page is closed with a message, or the check fails)
+- Fixed the paged reader ignoring the next tap after a press on a reader button was cancelled (for example when it turned into a scroll)
+- Fixed the webtoon reader's zoom and panning counting the side padding as part of the page, which let the page be dragged too far or showed a gap
+- Fixed the Local source being left out of Global Search when its language ("Other") wasn't enabled
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
