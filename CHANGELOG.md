@@ -81,6 +81,8 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed the paged reader ignoring the next tap after a press on a reader button was cancelled (for example when it turned into a scroll)
 - Fixed the webtoon reader's zoom and panning counting the side padding as part of the page, which let the page be dragged too far or showed a gap
 - Fixed the Local source being left out of Global Search when its language ("Other") wasn't enabled
+- Fixed concurrent requests to a site behind a Cloudflare check each opening their own WebView, causing slowdowns and memory pressure; they now wait for a single check. Requests that aren't GET (such as logins) now solve the check on the site's root page
+- Cloudflare checks are now detected with Cloudflare's `cf-mitigated` response header instead of parsing the page
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
