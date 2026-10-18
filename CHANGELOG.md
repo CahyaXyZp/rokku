@@ -85,6 +85,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed the Local source being left out of Global Search when its language ("Other") wasn't enabled
 - Fixed concurrent requests to a site behind a Cloudflare check each opening their own WebView, causing slowdowns and memory pressure; they now wait for a single check. Requests that aren't GET (such as logins) now solve the check on the site's root page
 - Cloudflare checks are now detected with Cloudflare's `cf-mitigated` response header instead of parsing the page
+- Fixed the app freezing when the reader showed the chapter transition page on slow storage, since the check for the next chapter being downloaded no longer runs on the main thread
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
