@@ -222,6 +222,7 @@
     <string name="skipped_reason_not_caught_up">Skipped because there are unread chapters</string>
     <string name="skipped_reason_not_started">Skipped because no chapters are read</string>
     <string name="skipped_reason_not_always_update">Skipped because series does not require updates</string>
+    <string name="skipped_reason_not_in_release_period">Skipped because no release was expected today</string>
     <string name="channel_errors">Errors</string>
     <string name="channel_skipped">Skipped</string>
 
@@ -229,11 +230,15 @@
     <string name="library_update_frequency">Library update frequency</string>
     <string name="library_update_custom_time">Update time</string>
     <string name="library_update_custom_time_summary">Approximate time of day the library will update, once every 24 hours</string>
-    <string name="pref_library_update_manga_restriction">Skip updating titles</string>
-    <string name="pref_update_only_completely_read">With unread chapter(s)</string>
-    <string name="pref_update_only_non_completed">With \"Completed\" status</string>
-    <string name="pref_update_only_cancelled">With \"Cancelled\" status</string>
-    <string name="pref_update_only_started">That haven\'t been started</string>
+    <string name="pref_library_update_manga_restriction">Smart update</string>
+    <string name="pref_update_only_completely_read">Skip entries with unread chapter(s)</string>
+    <string name="pref_update_only_non_completed">Skip entries with \"Completed\" status</string>
+    <string name="pref_update_only_cancelled">Skip entries with \"Cancelled\" status</string>
+    <string name="pref_update_only_started">Skip unstarted entries</string>
+    <string name="pref_library_update_smart_update">Smart update</string>
+    <string name="manga_interval_expected_update">New chapters predicted to be released in around %1$s, checking around every %2$s.</string>
+    <string name="manga_interval_expected_update_null">This manga is either completed, or there is no predicted release date.</string>
+    <string name="pref_update_only_in_release_period">Predict next release time</string>
     <string name="pref_update_only_completely_read_summary">Only update series if there is no unread chapter (completely read)</string>
     <string name="library_update_restriction">Device restrictions</string>
     <string name="library_update_restriction_summary">Update only when the conditions are met</string>
