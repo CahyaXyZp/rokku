@@ -1,3 +1,7 @@
+-- 27.sqm created scanlators_view and nothing dropped it afterwards, so databases that went through
+-- it still have a view selecting the column below, which makes SQLite reject the DROP COLUMN.
+DROP VIEW IF EXISTS scanlators_view;
+
 -- excluded_scanlators has been the source of truth since 33.sqm, and the old column was kept in sync
 -- with it, so nothing is lost by dropping it.
 ALTER TABLE mangas DROP COLUMN filtered_scanlators;
