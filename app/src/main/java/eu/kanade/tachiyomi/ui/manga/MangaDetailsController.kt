@@ -84,6 +84,7 @@ import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.isAuthError
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.icon
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.MaterialMenuSheet
 import eu.kanade.tachiyomi.ui.base.SmallToolbarInterface
@@ -159,6 +160,9 @@ import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import eu.kanade.tachiyomi.widget.LinearLayoutManagerAccurateOffset
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
 import yokai.domain.manga.models.cover
 import yokai.i18n.MR
 import yokai.presentation.core.Constants
@@ -166,8 +170,11 @@ import yokai.util.lang.getString
 import java.io.File
 import java.io.IOException
 import java.util.Locale
+import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Instant
 import android.R as AR
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -2062,6 +2069,34 @@ class MangaDetailsController :
      */
     override fun copyContentToClipboard(content: String, label: String?, useToast: Boolean) {
         snack = copyToClipboard(content, label, useToast)
+    }
+
+    override fun showNextUpdateDialog() {
+        val activity = activity ?: return
+        val manga = presenter.manga
+        val timeZone = TimeZone.currentSystemDefault()
+        val interval = manga.fetch_interval.absoluteValue
+        val nextUpdateDays = manga.next_update
+            .takeIf { it > 0 && manga.fetch_interval != 0 && manga.status != SManga.COMPLETED }
+            ?.let {
+                val today = Clock.System.now().toLocalDateTime(timeZone).date
+                val nextUpdate = Instant.fromEpochMilliseconds(it).toLocalDateTime(timeZone).date
+                today.daysUntil(nextUpdate).coerceAtLeast(0)
+            }
+        val message = if (nextUpdateDays == null) {
+            activity.getString(MR.strings.manga_interval_expected_update_null)
+        } else {
+            activity.getString(
+                MR.strings.manga_interval_expected_update,
+                activity.getString(MR.plurals.days_plural, nextUpdateDays, nextUpdateDays),
+                activity.getString(MR.plurals.days_plural, interval, interval),
+            )
+        }
+        activity.materialAlertDialog()
+            .setTitle(activity.getString(MR.strings.pref_library_update_smart_update))
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun showTrackingSheet() {
