@@ -87,6 +87,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Cloudflare checks are now detected with Cloudflare's `cf-mitigated` response header instead of parsing the page
 - Fixed the app freezing when the reader showed the chapter transition page on slow storage, since the check for the next chapter being downloaded no longer runs on the main thread
 - Fixed the Statistics screen freezing the app while opening with a large library, since the numbers are now calculated in the background
+- Fixed the crash screen closing by itself when the crash was caused by the database, so the error can be read and reported
 
 ### Other
 - Migrated FlexibleAdapter from JitPack to its MavenCentral release, removing a source of transient CI build failures when JitPack was unavailable
