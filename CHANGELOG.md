@@ -21,6 +21,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Added a "Skip this version" button to the new app update dialog, so an update you don't want stops being offered at launch and in the background until a newer version comes out (checking manually from About still shows it)
 - Added a "Preload only on Wi-Fi" option in the reader settings that, on a metered connection such as mobile data, loads only the page you're reading instead of preloading the next pages (off by default)
 - Added a "Predict next release time" option to Settings > Library > Smart update (renamed from "Skip updating titles", with its options reworded to match Mihon), which predicts when each series gets its next chapter from its past release dates and skips it in automatic library updates until then (off by default, manual updates always check). A new hourglass button on the manga details screen, available for every series in the library, shows the prediction
+- Added a copy button and text selection to the crash screen, so the error can be pasted into a report
 
 ### Changes
 - Updated the database schema (removed the unused `filtered_scanlators` column and added the release schedule of each series). This can't be undone and older versions can't open the updated database, so create a backup before updating
