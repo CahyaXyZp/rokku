@@ -84,6 +84,7 @@ import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.isAuthError
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.icon
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.MaterialMenuSheet
 import eu.kanade.tachiyomi.ui.base.SmallToolbarInterface
@@ -138,6 +139,7 @@ import eu.kanade.tachiyomi.util.system.timeSpanFromNow
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.w
 import eu.kanade.tachiyomi.util.system.withUIContext
+import eu.kanade.tachiyomi.util.view.GroupedRowDivider
 import eu.kanade.tachiyomi.util.view.activityBinding
 import eu.kanade.tachiyomi.util.view.copyToClipboard
 import eu.kanade.tachiyomi.util.view.findChild
@@ -158,6 +160,9 @@ import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import eu.kanade.tachiyomi.widget.LinearLayoutManagerAccurateOffset
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
 import yokai.domain.manga.models.cover
 import yokai.i18n.MR
 import yokai.presentation.core.Constants
@@ -166,8 +171,11 @@ import yokai.util.lang.getString
 import java.io.File
 import java.io.IOException
 import java.util.Locale
+import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Instant
 import android.R as AR
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -222,6 +230,9 @@ class MangaDetailsController :
     private var pageBackgroundColor: Int? = null
     private var accentColor: Int? = null
     private var accentOnColor: Int? = null
+    private var chapterDivider: GroupedRowDivider? = null
+    private var chapterDecoration: RecyclerView.ItemDecoration? = null
+    private var groupedChapterCards = false
     private var headerColor: Int? = null
     private var toolbarIsColored = false
     private var snack: Snackbar? = null
@@ -351,6 +362,7 @@ class MangaDetailsController :
             null
         }
         accentOnColor = onColorToUse
+        chapterDivider?.accentColor = accentColor
     }
 
     private fun setCoverColorValue(colorToUse: Int? = null) {
@@ -398,7 +410,12 @@ class MangaDetailsController :
         } else {
             null
         }
-        binding.swipeRefresh.setBackgroundColor(pageBackgroundColor ?: baseBackground)
+        val bg = pageBackgroundColor ?: baseBackground
+        binding.root.setBackgroundColor(bg)
+        binding.swipeRefresh.setBackgroundColor(bg)
+        binding.recycler.setBackgroundColor(bg)
+        binding.tabletRecycler.setBackgroundColor(bg)
+        binding.tabletOverlay.setBackgroundColor(bg)
     }
 
     private fun setRefreshStyle() {
@@ -545,9 +562,7 @@ class MangaDetailsController :
         binding.recycler.adapter = adapter
         adapter?.isSwipeEnabled = true
         binding.recycler.layoutManager = LinearLayoutManagerAccurateOffset(view.context)
-        binding.recycler.addItemDecoration(
-            MangaDetailsDivider(view.context),
-        )
+        installChapterDivider(view.context)
         binding.recycler.setHasFixedSize(true)
         val appbarHeight = activityBinding?.appBar?.attrToolbarHeight ?: 0
         val offset = 10.dpToPx
@@ -645,7 +660,7 @@ class MangaDetailsController :
         if (actionMode != null) {
             return
         }
-        val scrollingColor = headerColor ?: activity.getResourceColor(R.attr.colorPrimaryVariant)
+        val scrollingColor = headerColor ?: activity.getResourceColor(R.attr.colorSurfaceContainer)
         val topColor = ColorUtils.setAlphaComponent(scrollingColor, 0)
         val scrollingStatusColor =
             ColorUtils.setAlphaComponent(scrollingColor, (0.87f * 255).roundToInt())
@@ -792,10 +807,11 @@ class MangaDetailsController :
             }
         }
         accentOnColor = null
+        chapterDivider?.accentColor = accentColor
     }
 
     private fun setHeaderColorValueLegacy(colorToUse: Int, context: Context) {
-        val newColor = makeColorFrom(colorToUse, context.getResourceColor(R.attr.colorPrimaryVariant))
+        val newColor = makeColorFrom(colorToUse, context.getResourceColor(R.attr.colorSurfaceContainer))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 || context.isInNightMode()) {
             activity?.window?.navigationBarColor = ColorUtils.setAlphaComponent(
                 newColor,
@@ -808,7 +824,7 @@ class MangaDetailsController :
 
     private fun setStatusBarAndToolbar() {
         val topColor = Color.TRANSPARENT
-        val scrollingColor = headerColor ?: activity!!.getResourceColor(R.attr.colorPrimaryVariant)
+        val scrollingColor = headerColor ?: activity!!.getResourceColor(R.attr.colorSurfaceContainer)
         val scrollingStatusColor =
             ColorUtils.setAlphaComponent(scrollingColor, (0.87f * 255).roundToInt())
         activity?.window?.statusBarColor = if (toolbarIsColored) scrollingStatusColor else topColor
@@ -847,8 +863,33 @@ class MangaDetailsController :
         }
     }
 
+    private fun installChapterDivider(context: Context) {
+        chapterDecoration?.let { binding.recycler.removeItemDecoration(it) }
+        val grouped = presenter.preferences.groupedChapterCards().get()
+        groupedChapterCards = grouped
+        val decoration = if (grouped) {
+            GroupedRowDivider(
+                context,
+                isGroupedRow = { it is ChapterHolder },
+                maskGapWithBackground = false,
+            ).also {
+                it.accentColor = accentColor
+                chapterDivider = it
+            }
+        } else {
+            chapterDivider = null
+            MangaDetailsDivider(context)
+        }
+        chapterDecoration = decoration
+        binding.recycler.addItemDecoration(decoration)
+    }
+
     override fun onAttach(view: View) {
         super.onAttach(view)
+        if (groupedChapterCards != presenter.preferences.groupedChapterCards().get()) {
+            installChapterDivider(view.context)
+            adapter?.notifyDataSetChanged()
+        }
         presenter.refreshRelatedMangaFavorites()
         if (!returningFromReader) return
         returningFromReader = false
@@ -2033,6 +2074,34 @@ class MangaDetailsController :
      */
     override fun copyContentToClipboard(content: String, label: String?, useToast: Boolean) {
         snack = copyToClipboard(content, label, useToast)
+    }
+
+    override fun showNextUpdateDialog() {
+        val activity = activity ?: return
+        val manga = presenter.manga
+        val timeZone = TimeZone.currentSystemDefault()
+        val interval = manga.fetch_interval.absoluteValue
+        val nextUpdateDays = manga.next_update
+            .takeIf { it > 0 && manga.fetch_interval != 0 && manga.status != SManga.COMPLETED }
+            ?.let {
+                val today = Clock.System.now().toLocalDateTime(timeZone).date
+                val nextUpdate = Instant.fromEpochMilliseconds(it).toLocalDateTime(timeZone).date
+                today.daysUntil(nextUpdate).coerceAtLeast(0)
+            }
+        val message = if (nextUpdateDays == null) {
+            activity.getString(MR.strings.manga_interval_expected_update_null)
+        } else {
+            activity.getString(
+                MR.strings.manga_interval_expected_update,
+                activity.getString(MR.plurals.days_plural, nextUpdateDays, nextUpdateDays),
+                activity.getString(MR.plurals.days_plural, interval, interval),
+            )
+        }
+        activity.materialAlertDialog()
+            .setTitle(activity.getString(MR.strings.pref_library_update_smart_update))
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun showTrackingSheet() {

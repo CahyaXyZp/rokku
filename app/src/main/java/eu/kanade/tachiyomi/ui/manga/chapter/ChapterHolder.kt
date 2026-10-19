@@ -3,11 +3,15 @@ package eu.kanade.tachiyomi.ui.manga.chapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.View
+import android.view.ViewGroup
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.TextViewCompat
+import com.materialkolor.hct.Hct
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.databinding.ChaptersItemBinding
@@ -18,6 +22,8 @@ import eu.kanade.tachiyomi.util.chapter.ChapterUtil.Companion.preferredChapterNa
 import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.getResourceColor
+import eu.kanade.tachiyomi.util.system.isInNightMode
+import eu.kanade.tachiyomi.util.view.makeContainerShape
 import yokai.i18n.MR
 import yokai.util.lang.getString
 import android.R as AR
@@ -69,7 +75,7 @@ class ChapterHolder(
             statuses.add(chapter.scanlator!!)
         }
 
-        if (binding.frontView.translationX == 0f) {
+        if (getFrontView().translationX == 0f) {
             binding.read.setImageResource(
                 if (item.read) R.drawable.ic_eye_off_24dp else R.drawable.ic_eye_24dp,
             )
@@ -108,7 +114,7 @@ class ChapterHolder(
         anim2.duration = 600
         anim2.startDelay = 500
         anim2.addUpdateListener {
-            if (binding.startView.isVisible && binding.frontView.translationX <= 0) {
+            if (binding.startView.isVisible && getFrontView().translationX <= 0) {
                 binding.startView.isVisible = false
                 binding.endView.isVisible = true
             }
@@ -121,12 +127,12 @@ class ChapterHolder(
     }
 
     private fun slideAnimation(from: Float, to: Float): ObjectAnimator {
-        return ObjectAnimator.ofFloat(binding.frontView, View.TRANSLATION_X, from, to)
+        return ObjectAnimator.ofFloat(getFrontView(), View.TRANSLATION_X, from, to)
             .setDuration(300)
     }
 
     override fun getFrontView(): View {
-        return binding.frontView
+        return binding.chapterCard
     }
 
     override fun getRearEndView(): View {
@@ -138,7 +144,7 @@ class ChapterHolder(
     }
 
     private fun resetFrontView() {
-        if (binding.frontView.translationX != 0f) {
+        if (getFrontView().translationX != 0f) {
             itemView.post {
                 androidx.transition.TransitionManager.endTransitions(adapter.recyclerView)
                 adapter.notifyItemChanged(flexibleAdapterPosition)
@@ -149,8 +155,9 @@ class ChapterHolder(
     fun notifyStatus(status: Download.State, locked: Boolean, progress: Int, animated: Boolean = false) = with(
         binding.downloadButton.downloadButton,
     ) {
+        applyCardBackground()
         adapter.delegate.accentColor()?.let {
-            binding.startView.backgroundTintList = ColorStateList.valueOf(it)
+            binding.startView.setCardBackgroundColor(it)
             binding.bookmark.imageTintList = ColorStateList.valueOf(
                 context.getResourceColor(AR.attr.textColorPrimaryInverse),
             )
@@ -162,9 +169,49 @@ class ChapterHolder(
         }
         if (locked) {
             isVisible = false
-            return
+            return@with
         }
         isVisible = !localSource
         setDownloadStatus(status, progress, animated)
+    }
+
+    fun setCorners(top: Boolean, bottom: Boolean) {
+        val grouped = adapter.preferences.groupedChapterCards().get()
+        val cards = listOf(binding.chapterCard, binding.startView, binding.endView)
+        val horizontalMargin = if (grouped) 10.dpToPx else 0
+        cards.forEach { card ->
+            card.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                marginStart = horizontalMargin
+                marginEnd = horizontalMargin
+            }
+        }
+        if (grouped) {
+            val shapeModel = binding.chapterCard.makeContainerShape(top, bottom, clipContentTo = binding.frontView)
+            cards.forEach { it.shapeAppearanceModel = shapeModel }
+            binding.frontView.setBackgroundResource(R.drawable.transparent_item_selector)
+        } else {
+            val flat = binding.chapterCard.shapeAppearanceModel.toBuilder().setAllCornerSizes(0f).build()
+            cards.forEach { it.shapeAppearanceModel = flat }
+            binding.frontView.clipToOutline = false
+            binding.frontView.setBackgroundResource(R.drawable.list_item_selector)
+        }
+        applyCardBackground()
+    }
+
+    private fun applyCardBackground() {
+        if (!adapter.preferences.groupedChapterCards().get()) {
+            binding.chapterCard.setCardBackgroundColor(Color.TRANSPARENT)
+            binding.frontView.backgroundTintList =
+                adapter.delegate.pageBackgroundColor()?.let { ColorStateList.valueOf(it) }
+            return
+        }
+        binding.frontView.backgroundTintList = null
+        adapter.delegate.accentColor()?.let {
+            val context = binding.chapterCard.context
+            val page = adapter.delegate.pageBackgroundColor() ?: context.getResourceColor(R.attr.background)
+            val base = Hct.fromInt(page)
+            val tone = (base.tone + if (context.isInNightMode()) -4 else 4).coerceIn(0.0, 100.0)
+            binding.chapterCard.setCardBackgroundColor(Hct.from(Hct.fromInt(it).hue, base.chroma, tone).toInt())
+        }
     }
 }

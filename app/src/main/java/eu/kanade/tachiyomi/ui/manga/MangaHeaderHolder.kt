@@ -204,6 +204,7 @@ class MangaHeaderHolder(
                 true
             }
             trackButton.setOnClickListener { adapter.delegate.showTrackingSheet() }
+            nextUpdateButton.setOnClickListener { adapter.delegate.showNextUpdateDialog() }
             relatedRecycler?.layoutManager =
                 LinearLayoutManager(itemView.context, LinearLayoutManager.HORIZONTAL, false)
             relatedRecycler?.adapter = relatedCardAdapter
@@ -542,6 +543,8 @@ class MangaHeaderHolder(
 
         binding.filtersText.text = presenter.currentFilters()
 
+        binding.nextUpdateButton.isVisible = manga.favorite
+
         if (manga.isLocal()) {
             binding.webviewButton.isVisible = false
             binding.shareButton.isVisible = false
@@ -725,6 +728,7 @@ class MangaHeaderHolder(
             lessButton.setTextColor(accentColor)
             shareButton.imageTintList = ColorStateList.valueOf(accentColor)
             webviewButton.imageTintList = ColorStateList.valueOf(accentColor)
+            nextUpdateButton.imageTintList = ColorStateList.valueOf(accentColor)
             filterButton.imageTintList = ColorStateList.valueOf(accentColor)
 
             val states = arrayOf(

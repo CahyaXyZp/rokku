@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
+import eu.kanade.tachiyomi.source.LocalSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -25,7 +26,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -84,6 +87,12 @@ open class GlobalSearchPresenter(
 
     var items: List<GlobalSearchItem> = emptyList()
 
+    // Guards the read-modify-write of `items` (and the `loadTime` map it sorts by) below --
+    // up to 5 sources can finish concurrently on Dispatchers.Default's real thread pool, and
+    // without this, two near-simultaneous completions can race: both read the same `items`
+    // snapshot, and the second write silently discards the first source's result.
+    private val itemsMutex = Mutex()
+
     private val semaphore = Semaphore(5)
 
     override fun onCreate() {
@@ -122,7 +131,7 @@ open class GlobalSearchPresenter(
         val pinnedCatalogues = preferences.pinnedCatalogues().get()
 
         val list = sourceManager.getCatalogueSources()
-            .filter { it.lang in languages }
+            .filter { it.lang in languages || it.id == LocalSource.ID }
             .filterNot { it.id.toString() in hiddenCatalogues }
             .sortedBy { "(${it.lang}) ${it.name}" }
 
@@ -224,9 +233,6 @@ open class GlobalSearchPresenter(
                             .mangas.take(10)
                             .mapNotNull { networkToLocalManga(it, source.id) }
                         fetchImage(mangas, source)
-                        if (mangas.isNotEmpty() && !loadTime.containsKey(source.id)) {
-                            loadTime[source.id] = Date().time
-                        }
                         val checkDuplicates = preferences.showDuplicateInLibraryItems().get()
                         val result = createCatalogueSearchItem(
                             source,
@@ -239,18 +245,23 @@ open class GlobalSearchPresenter(
                                 )
                             },
                         )
-                        items = items
-                            .map { item -> if (item.source == result.source) result else item }
-                            .sortedWith(
-                                compareBy(
-                                    // Bubble up sources that actually have results
-                                    { it.results.isNullOrEmpty() },
-                                    // Same as initial sort, i.e. pinned first then alphabetically
-                                    { it.source.id.toString() !in pinnedSourceIds },
-                                    { loadTime[it.source.id] ?: 0L },
-                                    { "${it.source.name.lowercase(Locale.getDefault())} (${it.source.lang})" },
-                                ),
-                            )
+                        itemsMutex.withLock {
+                            if (mangas.isNotEmpty() && !loadTime.containsKey(source.id)) {
+                                loadTime[source.id] = Date().time
+                            }
+                            items = items
+                                .map { item -> if (item.source == result.source) result else item }
+                                .sortedWith(
+                                    compareBy(
+                                        // Bubble up sources that actually have results
+                                        { it.results.isNullOrEmpty() },
+                                        // Same as initial sort, i.e. pinned first then alphabetically
+                                        { it.source.id.toString() !in pinnedSourceIds },
+                                        { loadTime[it.source.id] ?: 0L },
+                                        { "${it.source.name.lowercase(Locale.getDefault())} (${it.source.lang})" },
+                                    ),
+                                )
+                        }
                         scheduleSetItems()
                     }
                 }

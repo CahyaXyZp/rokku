@@ -179,6 +179,8 @@ class PreferencesHelper(val context: Context, val preferenceStore: PreferenceSto
 
     fun preloadSize() = preferenceStore.getInt(Keys.preloadSize, 6)
 
+    fun preloadOnlyOnWifi() = preferenceStore.getBoolean(Keys.preloadOnlyOnWifi, false)
+
     fun autoUpdateTrack() = preferenceStore.getBoolean(Keys.autoUpdateTrack, true)
 
     fun trackMarkedAsRead() = preferenceStore.getBoolean(Keys.trackMarkedAsRead, false)
@@ -402,6 +404,8 @@ class PreferencesHelper(val context: Context, val preferenceStore: PreferenceSto
 
     fun lastAppCheck() = preferenceStore.getLong("last_app_check", 0)
 
+    fun skippedAppUpdate() = preferenceStore.getString("skipped_app_update", "")
+
     fun checkForBetas() = preferenceStore.getBoolean("check_for_betas", BuildConfig.BETA)
 
     fun unreadBadgeType() = preferenceStore.getInt("unread_badge_type", 2)
@@ -469,6 +473,8 @@ class PreferencesHelper(val context: Context, val preferenceStore: PreferenceSto
 
     fun themeMangaDetails() = preferenceStore.getBoolean(Keys.themeMangaDetails, true)
     fun themeMangaDetailsBackground() = preferenceStore.getBoolean(Keys.themeMangaDetailsBackground, false)
+    fun groupedChapterCards() = preferenceStore.getBoolean(Keys.groupedChapterCards, false)
+    fun tintedControls() = preferenceStore.getBoolean(Keys.tintedControls, false)
     fun coverThemeStyle() = preferenceStore.getInt(Keys.coverThemeStyle, coverThemeOptions.indexOf(null))
 
     fun renderDescriptionImages() = preferenceStore.getBoolean(Keys.renderDescriptionImages, true)

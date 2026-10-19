@@ -88,6 +88,118 @@ class CrashlyticsLogWriterTest {
     }
 
     @Test
+    fun `a source extension's own login and token validation is ignored`() {
+        ignored(IOException("Missing username or password")) shouldBe true
+        ignored(IOException("Open webview to refresh token")) shouldBe true
+    }
+
+    @Test
+    fun `an extension's encrypted preference failing to decrypt before JSON parsing is ignored`() {
+        ignored(
+            SerializationException(
+                "Unexpected JSON token at offset 0: Expected start of the object '{', but had 'e' instead at path: \$\n" +
+                    "JSON input: enc:v1:abafd3384362e833:jMmsq9.....",
+            ),
+        ) shouldBe true
+    }
+
+    @Test
+    fun `a source rejecting a chapter or page request for reasons outside app control is ignored`() {
+        ignored(IOException("Premium chapter. Not available.")) shouldBe true
+        ignored(Exception("Chapter encryption unavailable")) shouldBe true
+        ignored(RuntimeException("Set Tachidesk server url in extension settings")) shouldBe true
+    }
+
+    @Test
+    fun `HttpException is ignored for malformed queries too`() {
+        ignored(HttpException(400)) shouldBe true
+    }
+
+    @Test
+    fun `an extension's bundled database missing an index is ignored`() {
+        ignored(
+            Exception(
+                "m0: select `s`.`mangaID` ... from `mh01` as `s` - Can't find FULLTEXT index matching the column list",
+            ),
+        ) shouldBe true
+    }
+
+    @Test
+    fun `a multisrc theme DTO missing fields is ignored`() {
+        ignored(
+            SerializationException(
+                "Fields [value, data] are required for type with serial name " +
+                    "'eu.kanade.tachiyomi.multisrc.mmrcms.SuggestionDto', but they were missing at path: \$[0]",
+            ),
+        ) shouldBe true
+    }
+
+    @Test
+    fun `an extension failing to find its reader signer bindings is ignored`() {
+        ignored(IOException("Reader signer bindings not found")) shouldBe true
+    }
+
+    @Test
+    fun `an extension's own DTO missing a field is ignored`() {
+        ignored(
+            SerializationException(
+                "Field 'baseUrl' is required for type with serial name " +
+                    "'eu.kanade.tachiyomi.extension.en.comix.ChapterResponse.Pages', but it was missing at path: \$.result.pages",
+            ),
+        ) shouldBe true
+    }
+
+    @Test
+    fun `Hikka's OAuth preference saved as the literal text null is ignored`() {
+        ignored(
+            SerializationException(
+                "Unexpected JSON token at offset 0: Expected start of the object '{', but had 'n' instead at path: \$\n" +
+                    "JSON input: null",
+            ),
+        ) shouldBe true
+    }
+
+    @Test
+    fun `an extension's own source class missing from its installed APK is ignored`() {
+        ignored(ClassNotFoundException("eu.kanade.tachiyomi.extension.ar.mangapro.ProComic")) shouldBe true
+    }
+
+    @Test
+    fun `stale chapter metadata is ignored regardless of exact wording`() {
+        ignored(IllegalStateException("Refresh Chapter List")) shouldBe true
+        ignored(IllegalStateException("Refresh the chapter list.")) shouldBe true
+        ignored(IllegalStateException("Could not find manga")) shouldBe true
+        ignored(IllegalStateException("Refresh manga")) shouldBe true
+    }
+
+    @Test
+    fun `extension-raised plain exceptions and corrupted CBZ reads are ignored`() {
+        ignored(Exception("Nothing read from 2 site requests")) shouldBe true
+        ignored(Exception("Chapter pages failed: HTTP 503")) shouldBe true
+        ignored(
+            Exception("Open in WebView to solve the captcha, or turn on \"Solve captchas\" in extension settings"),
+        ) shouldBe true
+        ignored(IllegalStateException("Reader pages HTTP 403: FORBIDDEN_EXCLUSIVE")) shouldBe true
+        ignored(IllegalStateException("Locked chapter, unlock in WebView.")) shouldBe true
+        ignored(HttpException(410)) shouldBe true
+        ignored(IOException("Open in WebView to pass the site's verification")) shouldBe true
+        ignored(Exception("Couldn't solve the site's captcha (HTTP error 500), open in WebView to solve it")) shouldBe true
+        ignored(Exception("Chapter page 2 failed: HTTP 521")) shouldBe true
+        ignored(Exception("Chapter page 2 failed: timeout")) shouldBe false
+        ignored(IOException("User does not have the license of requested content")) shouldBe true
+        ignored(
+            IOException("Username or password cannot be empty.\nGo to Extensions > Details to input your credentials."),
+        ) shouldBe true
+        ignored(IOException("Open in WebView to set necessary cookies.")) shouldBe true
+        ignored(Exception("WebView render process was killed")) shouldBe true
+        ignored(ArchiveException("ZIP bad CRC: 0x7b114351 should be 0x3f25e0b2")) shouldBe true
+        ignored(ArchiveException("Truncated ZIP file data")) shouldBe false
+    }
+
+    // Same simple name as libarchive's exception, which the filter matches by name.
+    private class ArchiveException(message: String) : Exception(message)
+
+    @Test
     fun `the whole cause chain is walked`() {
         val wrapped = IOException("failed to load cover", IOException("stream was reset: INTERNAL_ERROR"))
         ignored(wrapped) shouldBe true

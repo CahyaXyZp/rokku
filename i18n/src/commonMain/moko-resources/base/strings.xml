@@ -124,6 +124,7 @@
     <string name="updating_">Updating %1$s</string>
     <string name="update_available">Update available</string>
     <string name="new_version_available">New version available!</string>
+    <string name="skip_this_version">Skip this version</string>
     <string name="new_beta_version_available">New beta version available!</string>
     <string name="no_new_updates_available">No new updates available</string>
     <string name="searching_for_updates">Searching for updates…</string>
@@ -222,6 +223,7 @@
     <string name="skipped_reason_not_caught_up">Skipped because there are unread chapters</string>
     <string name="skipped_reason_not_started">Skipped because no chapters are read</string>
     <string name="skipped_reason_not_always_update">Skipped because series does not require updates</string>
+    <string name="skipped_reason_not_in_release_period">Skipped because no release was expected today</string>
     <string name="channel_errors">Errors</string>
     <string name="channel_skipped">Skipped</string>
 
@@ -229,11 +231,15 @@
     <string name="library_update_frequency">Library update frequency</string>
     <string name="library_update_custom_time">Update time</string>
     <string name="library_update_custom_time_summary">Approximate time of day the library will update, once every 24 hours</string>
-    <string name="pref_library_update_manga_restriction">Skip updating titles</string>
-    <string name="pref_update_only_completely_read">With unread chapter(s)</string>
-    <string name="pref_update_only_non_completed">With \"Completed\" status</string>
-    <string name="pref_update_only_cancelled">With \"Cancelled\" status</string>
-    <string name="pref_update_only_started">That haven\'t been started</string>
+    <string name="pref_library_update_manga_restriction">Smart update</string>
+    <string name="pref_update_only_completely_read">Skip entries with unread chapter(s)</string>
+    <string name="pref_update_only_non_completed">Skip entries with \"Completed\" status</string>
+    <string name="pref_update_only_cancelled">Skip entries with \"Cancelled\" status</string>
+    <string name="pref_update_only_started">Skip unstarted entries</string>
+    <string name="pref_library_update_smart_update">Smart update</string>
+    <string name="manga_interval_expected_update">New chapters predicted to be released in around %1$s, checking around every %2$s.</string>
+    <string name="manga_interval_expected_update_null">This manga is either completed, or there is no predicted release date.</string>
+    <string name="pref_update_only_in_release_period">Predict next release time</string>
     <string name="pref_update_only_completely_read_summary">Only update series if there is no unread chapter (completely read)</string>
     <string name="library_update_restriction">Device restrictions</string>
     <string name="library_update_restriction_summary">Update only when the conditions are met</string>
@@ -428,11 +434,21 @@
     <!-- Reader settings -->
     <string name="fullscreen">Fullscreen</string>
     <string name="animate_page_transitions">Animate page transitions</string>
+    <string name="page_transition_effect">Page transition effect</string>
+    <string name="page_transition_speed">Page transition speed</string>
+    <string name="slide">Slide</string>
+    <string name="fade">Fade</string>
+    <string name="depth">Depth</string>
+    <string name="zoom_out">Zoom out</string>
+    <string name="slow">Slow</string>
+    <string name="very_slow">Very slow</string>
     <string name="enable_zoom_out">Enable zoom out</string>
     <string name="double_tap_anim_speed">Double tap animation speed</string>
     <string name="show_page_number">Show page number</string>
     <string name="true_32bit_color">32-bit color</string>
     <string name="page_preload_amount">Page preload amount</string>
+    <string name="preload_only_on_wifi">Preload only on Wi-Fi</string>
+    <string name="preload_only_on_wifi_summary">Saves mobile data by loading only the page you're reading while on a metered connection</string>
     <string name="amount_of_pages_to_preload">The amount of pages to preload when reading. Higher values will result in a smoother reading experience, at the cost of higher cache and network usage</string>
     <string name="reduces_banding_impacts_performance">Reduces banding, but may impact
         performance</string>
@@ -655,6 +671,8 @@
     <string name="not_tracked">Not tracked</string>
     <string name="services">Services</string>
     <string name="tracking_info">One-way sync to update the chapter progress in tracking services. Set up tracking for individual entries from their tracking button</string>
+    <string name="tracking_legacy_notice">You\'re entering the legacy version of \'Tracking\'</string>
+    <string name="advanced_experimental_notice">You\'re entering experimental version of \'Advanced\'</string>
     <string name="enhanced_services">Enhanced services</string>
     <string name="enhanced_tracking_info">Services that provide enhanced features for specific sources. Entries are automatically tracked when added to your library</string>
     <string name="update_tracking_after_reading">Update tracking after reading</string>
@@ -837,9 +855,11 @@
     <string name="by_default_side_nav_info">By default, side navigation is used for certain phones and small tablets when in landscape, and always shows on larger tablets</string>
     <string name="follow_system_theme">Follow system theme</string>
     <string name="pure_black_dark_mode">Pure black dark mode</string>
+    <string name="tinted_controls">Tint switches and outlines with theme color</string>
     <string name="details_page">Details page</string>
     <string name="theme_buttons_based_on_cover">Theme buttons based on cover</string>
     <string name="theme_background_based_on_cover">Theme background based on cover</string>
+    <string name="grouped_chapter_cards">Group chapters into cards</string>
     <string name="cover_theme_style">Cover theme style</string>
     <string name="palette_style_tonal_spot">Tonal Spot</string>
     <string name="legacy_theme">Legacy</string>
@@ -1193,6 +1213,8 @@
     <string name="information_cloudflare_help">Tap here for help with Cloudflare</string>
     <string name="please_update_webview">Please update the WebView app for better compatibility</string>
     <string name="information_webview_required">WebView is required for the app to function</string>
+    <!-- Do not translate "WebView" -->
+    <string name="information_webview_crashed">WebView stopped working and the page was closed</string>
     <!-- Do not translate "WebView" -->
     <string name="webview_is_required">WebView is required for Tachiyomi</string>
     <string name="action_webview_back">Back</string>

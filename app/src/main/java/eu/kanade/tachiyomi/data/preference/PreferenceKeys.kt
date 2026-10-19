@@ -85,6 +85,8 @@ object PreferenceKeys {
 
     const val preloadSize = "preload_size"
 
+    const val preloadOnlyOnWifi = "preload_only_on_wifi"
+
     const val webtoonSidePadding = "webtoon_side_padding"
 
     const val webtoonEnableZoomOut = "webtoon_enable_zoom_out"
@@ -223,6 +225,10 @@ object PreferenceKeys {
     const val themeMangaDetails = "theme_manga_details"
 
     const val themeMangaDetailsBackground = "theme_manga_details_background"
+
+    const val groupedChapterCards = "grouped_chapter_cards"
+
+    const val tintedControls = "tinted_controls"
 
     const val coverThemeStyle = "pref_cover_theme_style"
 

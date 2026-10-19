@@ -93,6 +93,42 @@ class CrashlyticsLogWriter : LogWriter() {
      * meantime (chapter list refreshed, manga removed). HistoryRepositoryImpl already catches
      * this and skips the row; there's simply no chapter left to attach the history to.
      *
+     * Also skips a source extension's own login/token validation rejecting a request before it
+     * even reaches the network: missing login credentials the user never configured in the
+     * extension's preferences ("Missing username or password") and a tracker/extension
+     * signaling it needs an interactive webview relogin to refresh an expired token ("Open
+     * webview to refresh token", same category as MALTokenExpired above) - neither reflects a
+     * Rokku bug. Also skips a source extension's own encrypted preference (a saved cookie/token)
+     * failing to decrypt before being handed to the JSON decoder - e.g. the Android Keystore key
+     * that encrypted it was invalidated by a backup restore or reinstall - leaving the raw
+     * ciphertext ("enc:v1:...") to fail JSON parsing; not a Rokku bug either.
+     *
+     * Also skips a source extension rejecting a chapter/page request for a reason outside the
+     * app's control: content requiring a paid/premium account on the source's site ("Premium
+     * chapter. Not available.", same category as "Chapter locked" above), a chapter whose
+     * content is wrapped in a scheme the extension couldn't unwrap ("Chapter encryption
+     * unavailable", "Reader signer bindings not found"), and a self-hosted bridge extension (e.g. Tachidesk) that isn't configured
+     * yet ("Set Tachidesk server url in extension settings", same category as "Missing username
+     * or password" above) - none of these reflect a Rokku bug. Also skips a source's own search
+     * backend erroring out on a malformed query, whether as an HTTP 400 (HttpException) or as a
+     * raised SQL error from the extension's bundled database missing an index ("Can't find
+     * FULLTEXT index matching the column list").
+     *
+     * Also skips a `multisrc` theme shared by several Keiyoushi extensions failing to decode a
+     * site's response into one of its DTOs (MissingFieldException with a serial name under
+     * "eu.kanade.tachiyomi.multisrc.", or a single extension's own DTO under
+     * "eu.kanade.tachiyomi.extension.") - the site's own API/markup changed; not a Rokku bug.
+     * Also skips Hikka's OAuth token preference round-tripping through `saveOAuth(null)` (which
+     * encodes the literal text "null") and then failing to decode as an HKOAuth object on the
+     * next `loadOAuth()` - same already-handled "user never logged in" case as the EOF one above,
+     * just a different literal.
+     *
+     * Also skips an extension's own source class no longer existing in its installed APK
+     * (ClassNotFoundException for a class under "eu.kanade.tachiyomi.extension.", not just the
+     * empty-DexPathList race above) - ExtensionLoader.loadExtension already catches this per
+     * extension and marks it as a load error without crashing; the extension's packaging is
+     * simply out of sync with its repo metadata.
+     *
      * Also skips a batch of cover/reader/browse conditions that only reflect a source or the
      * network misbehaving, never a Rokku bug: MangaCoverFetcher raising a source's HTTP error
      * status ("HTTP 4xx/5xx …"), a missing/invalid cover URL in the source's metadata
@@ -115,6 +151,32 @@ class CrashlyticsLogWriter : LogWriter() {
      * folder is gone or holds a non-archive file ("… is not a valid directory",
      * "Unrecognized archive format"), and an extension signaling its own manga/chapter list
      * needs a refresh before continuing ("Refresh manga").
+     *
+     * Also skips three plain `java.lang.Exception`s raised by an extension's own code (only
+     * the message identifies them): its site probe finding nothing to read ("Nothing read from
+     * N site requests"), its page-list request failing with the site's HTTP status ("Chapter
+     * pages failed: HTTP 5xx"), and its WebView client asking the user to solve a captcha
+     * ("Open in WebView to solve the captcha…"). Also skips libarchive reporting a bad CRC
+     * while reading a downloaded CBZ - the file on the user's storage is corrupted and the
+     * reader already shows its page error.
+     *
+     * Also skips an extension's reader-page request rejected by the site ("Reader pages HTTP
+     * 403: FORBIDDEN_EXCLUSIVE"), an extension reporting a locked chapter that must be unlocked
+     * in the WebView ("Locked chapter, unlock in WebView.", same category as "Chapter locked"),
+     * and a source answering HTTP 410 Gone (same category as 404).
+     *
+     * Also skips an extension's anti-bot prompts and per-page failures: "Open in WebView to
+     * pass the site's verification", "Couldn't solve the site's captcha (HTTP error 500), open
+     * in WebView to solve it" (same category as the captcha message above) and "Chapter page N
+     * failed: HTTP 5xx" (same category as "Chapter pages failed: HTTP 5xx").
+     *
+     * Also skips more extension-raised messages the user has to resolve on their side: content
+     * the account has no license for ("User does not have the license of requested content"),
+     * credentials not filled in yet ("Username or password cannot be empty. Go to Extensions >
+     * Details...", same category as "Missing username or password"), cookies that must be set
+     * through the WebView ("Open in WebView to set necessary cookies."), and the system WebView's
+     * render process being killed by the OS ("WebView render process was killed", raised from
+     * the extension's WebViewClient.onRenderProcessGone).
      */
     internal fun Throwable.isIgnoredForCrashlytics(): Boolean {
         var current: Throwable? = this
@@ -136,7 +198,12 @@ class CrashlyticsLogWriter : LogWriter() {
                 is NoPagesException,
                 -> return true
 
-                is HttpException -> if (current.isAuthError || current.isServerError || current.code == 404 || current.code == 429) return true
+                is HttpException -> if (
+                    current.isAuthError || current.isServerError ||
+                    current.code == 400 || current.code == 404 || current.code == 410 || current.code == 429
+                ) {
+                    return true
+                }
 
                 is HttpStatusException -> if (current.statusCode in 500..599 || current.statusCode == 404) return true
 
@@ -160,6 +227,10 @@ class CrashlyticsLogWriter : LogWriter() {
                     current.message == "Chapter locked" ||
                     current.message == "Can't open InputStream" ||
                     current.message == "Failed to bypass Cloudflare" ||
+                    current.message == "Missing username or password" ||
+                    current.message == "Open webview to refresh token" ||
+                    current.message == "Premium chapter. Not available." ||
+                    current.message == "Reader signer bindings not found" ||
                     current.message?.startsWith("stream was reset: ") == true ||
                     current.message?.startsWith("Too many follow-up requests") == true ||
                     current.message?.startsWith("unexpected end of stream on ") == true ||
@@ -179,12 +250,31 @@ class CrashlyticsLogWriter : LogWriter() {
                     current.message?.contains("had 'EOF' instead") == true ||
                     // A source returned an HTML page (Cloudflare / error page) where JSON was expected.
                     current.message?.contains("<!DOCTYPE") == true ||
-                    current.message?.contains("<html") == true
+                    current.message?.contains("<html") == true ||
+                    // A source extension's own encrypted preference (cookie/token) failed to
+                    // decrypt and the raw ciphertext was handed to the JSON decoder instead.
+                    current.message?.contains("JSON input: enc:") == true ||
+                    // Hikka's saveOAuth(null) encodes the literal text "null" as the saved
+                    // token preference; decoding it back as HKOAuth fails the same way the
+                    // EOF case above does.
+                    current.message?.contains("JSON input: null") == true ||
+                    // A multisrc theme (shared by several extensions) failing to decode a
+                    // site's response into its own DTO - the site's API/markup changed.
+                    current.message?.contains("eu.kanade.tachiyomi.multisrc.") == true ||
+                    // Same for a single extension's own DTO.
+                    current.message?.contains("serial name 'eu.kanade.tachiyomi.extension.") == true
                 ) {
                     return true
                 }
 
-                is ClassNotFoundException -> if (current.message?.contains("DexPathList[[]") == true) return true
+                is ClassNotFoundException -> if (
+                    current.message?.contains("DexPathList[[]") == true ||
+                    // The extension's installed APK no longer contains this source class -
+                    // ExtensionLoader.loadExtension already catches this per extension.
+                    current.message?.startsWith("eu.kanade.tachiyomi.extension.") == true
+                ) {
+                    return true
+                }
 
                 is IllegalArgumentException -> if (
                     current.message?.contains("is child of") == true &&
@@ -194,10 +284,38 @@ class CrashlyticsLogWriter : LogWriter() {
                 }
             }
 
-            if (current.message == "Refresh Chapter List" || current.message == "Could not find manga" || current.message == "Refresh manga") return true
+            if (
+                current.message == "Refresh Chapter List" ||
+                current.message == "Could not find manga" ||
+                current.message == "Refresh manga" ||
+                current.message == "Chapter encryption unavailable" ||
+                current.message == "Set Tachidesk server url in extension settings" ||
+                // The full message is "<prefix>: <raw SQL query> - Can't find FULLTEXT index ...".
+                current.message?.endsWith("Can't find FULLTEXT index matching the column list") == true ||
+                // Extensions phrase this differently (e.g. "Refresh the chapter list."); match loosely.
+                (
+                    current.message?.contains("refresh", ignoreCase = true) == true &&
+                        current.message?.contains("chapter list", ignoreCase = true) == true
+                    )
+            ) {
+                return true
+            }
             // A source's Cloudflare/WebView challenge not resolving in time, or a local-library
             // folder that was renamed/deleted or has a non-archive file in it - not a Rokku bug.
             if (current.message?.startsWith("Timed out waiting for WebView") == true) return true
+            if (current.message?.startsWith("Nothing read from ") == true) return true
+            if (current.message?.startsWith("Chapter pages failed: HTTP ") == true) return true
+            if (current.message?.startsWith("Reader pages HTTP ") == true) return true
+            if (current.message?.startsWith("Locked chapter, unlock in WebView") == true) return true
+            if (current.message?.startsWith("Open in WebView to solve the captcha") == true) return true
+            if (current.message?.startsWith("Open in WebView to pass the site's verification") == true) return true
+            if (current.message?.startsWith("Couldn't solve the site's captcha") == true) return true
+            if (current.message?.matches(EXTENSION_PAGE_HTTP_FAILURE) == true) return true
+            if (current.message?.startsWith("User does not have the license of requested content") == true) return true
+            if (current.message?.startsWith("Username or password cannot be empty") == true) return true
+            if (current.message?.startsWith("Open in WebView to set necessary cookies") == true) return true
+            if (current.message?.startsWith("WebView render process was killed") == true) return true
+            if (current.javaClass.simpleName == "ArchiveException" && current.message?.startsWith("ZIP bad CRC") == true) return true
             if (current.message?.endsWith("is not a valid directory") == true) return true
             if (current.message == "Unrecognized archive format") return true
             if (current.javaClass.simpleName == "ForegroundServiceStartNotAllowedException") return true
@@ -214,5 +332,8 @@ class CrashlyticsLogWriter : LogWriter() {
     private companion object {
         /** Matches the "HTTP 404 …" message MangaCoverFetcher raises as a plain IOException. */
         val HTTP_STATUS_MESSAGE = Regex("""HTTP \d{3}\b.*""")
+
+        /** Matches "Chapter page 2 failed: HTTP 521", raised by an extension for a single page request. */
+        val EXTENSION_PAGE_HTTP_FAILURE = Regex("""Chapter page \d+ failed: HTTP \d{3}\b.*""")
     }
 }
