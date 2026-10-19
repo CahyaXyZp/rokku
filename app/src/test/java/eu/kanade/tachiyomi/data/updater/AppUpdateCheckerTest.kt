@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.data.updater
 
-import eu.kanade.tachiyomi.core.preference.Preference
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.network.NetworkHelper
 import io.mockk.every
@@ -98,22 +97,16 @@ class AppUpdateCheckerTest {
     }
 
     @Test
-    fun `Only the skipped version is skipped`() {
-        val skipped = mockk<Preference<String>> { every { get() } returns "1.2.3" }
-        val preferences = mockk<PreferencesHelper> { every { skippedAppUpdate() } returns skipped }
-        val checker = AppUpdateChecker(mockk(), mockk(), preferences)
-
-        assertTrue(checker.isSkipped("1.2.3"))
-        assertFalse(checker.isSkipped("1.2.4"))
+    fun `Only newer versions are accepted`() {
+        assertTrue(isNewVersion("1.2.4", "1.2.3"))
+        assertFalse(isNewVersion("1.2.3", "1.2.3"))
+        assertFalse(isNewVersion("1.2.2", "1.2.3"))
     }
 
     @Test
-    fun `Nothing is skipped by default`() {
-        val skipped = mockk<Preference<String>> { every { get() } returns "" }
-        val preferences = mockk<PreferencesHelper> { every { skippedAppUpdate() } returns skipped }
-        val checker = AppUpdateChecker(mockk(), mockk(), preferences)
-
-        assertFalse(checker.isSkipped("1.2.3"))
+    fun `Invalid versions are rejected`() {
+        assertFalse(isNewVersion("invalid", "1.2.3"))
+        assertFalse(isNewVersion("1.2.3", "invalid"))
     }
 
     private fun isNewVersion(newVersion: String, currentVersion: String): Boolean {
