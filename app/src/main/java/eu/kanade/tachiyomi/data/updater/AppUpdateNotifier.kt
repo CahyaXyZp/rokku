@@ -58,7 +58,7 @@ internal class AppUpdateNotifier(private val context: Context) {
         val canDownload = release.isApkDownloadable
 
         val pendingIntent = if (canDownload) {
-            NotificationReceiver.openUpdatePendingActivity(context, body, url)
+            NotificationReceiver.openUpdatePendingActivity(context, body, url, release.version)
         } else {
             viewPagePendingIntent(releaseUrl)
         }
