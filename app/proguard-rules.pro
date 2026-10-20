@@ -120,6 +120,13 @@
 # onNativeStatusChanged method by name/signature via JNI reflection (FindClass/
 # GetStaticMethodID), which R8 can't trace as a usage - keep them explicitly or
 # shrinking can strip the callback and silently break status updates.
+
+# Shizuku loads ShellInterface reflectively in its own process.
+-keepclassmembers class eu.kanade.tachiyomi.extension.installer.shizuku.ShellInterface {
+    public <init>();
+    public void destroy();
+}
+
 -keep class eu.kanade.tachiyomi.data.connections.discord.DiscordRpcManager {
     *;
 }
