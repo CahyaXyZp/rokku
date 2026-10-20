@@ -1,3 +1,3 @@
--- Add release schedule fields after the previous upstream migration version.
+-- Add release schedule fields in a new migration to cover databases that already applied upstream migration 36.
 ALTER TABLE mangas ADD COLUMN fetch_interval INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE mangas ADD COLUMN next_update INTEGER NOT NULL DEFAULT 0;
